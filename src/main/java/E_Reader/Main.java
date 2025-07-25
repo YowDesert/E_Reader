@@ -13,7 +13,7 @@ import javafx.stage.Stage;
 import java.io.File;
 
 public class Main extends Application {
-    //test
+
     private ImageViewer viewer = new ImageViewer();
     private ImageLoader imageLoader = new ImageLoader();
     private PdfLoader pdfLoader = new PdfLoader();
