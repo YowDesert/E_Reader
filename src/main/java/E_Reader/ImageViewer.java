@@ -7,7 +7,7 @@ import javafx.scene.image.ImageView;
 import java.util.List;
 
 public class ImageViewer {
-    //test
+
     private List<Image> images;
     private ImageView imageView = new ImageView();
     private Label pageLabel = new Label("Page: 0 / 0");
