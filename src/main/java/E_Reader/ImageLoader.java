@@ -11,6 +11,7 @@ import java.util.List;
 public class ImageLoader {
 
     public List<Image> loadImagesFromFolder(File folder) {
+        //test
         File[] files = folder.listFiles(f -> {
             String name = f.getName().toLowerCase();
             return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");

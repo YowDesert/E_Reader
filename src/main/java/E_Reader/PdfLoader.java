@@ -14,6 +14,7 @@ import java.util.List;
 public class PdfLoader {
 
     public List<Image> loadImagesFromPdf(File pdfFile) throws IOException {
+        //test
         List<Image> images = new ArrayList<>();
         try (PDDocument document = PDDocument.load(pdfFile)) {
             PDFRenderer renderer = new PDFRenderer(document);
