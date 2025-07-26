@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,6 +12,13 @@
 
     <name>E-Reader</name>
     <description>多媒體電子閱讀器 - 支援PDF和圖片檔案</description>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>github-panteleyev</id>
+            <url>https://maven.pkg.github.com/panteleyev/jpackage-maven-plugin</url>
+        </pluginRepository>
+    </pluginRepositories>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -25,74 +31,66 @@
     </properties>
 
     <dependencies>
-        <!-- JavaFX 核心模組 -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-swing</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
-        <!-- 媒體支援 (用於未來擴展) -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-media</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
-        <!-- Apache PDFBox - PDF 處理 -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>${pdfbox.version}</version>
         </dependency>
-
-        <!-- PDFBox 工具 -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox-tools</artifactId>
             <version>${pdfbox.version}</version>
         </dependency>
-
-        <!-- 圖片處理增強 -->
+        <dependency>
+            <groupId>net.sourceforge.tess4j</groupId>
+            <artifactId>tess4j</artifactId>
+            <version>5.8.0</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-imaging</artifactId>
-            <version>1.0.0-alpha3</version>
+            <version>1.0-alpha3</version>
         </dependency>
-
-        <!-- JSON 設定檔支援 -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.15.2</version>
         </dependency>
-
-        <!-- 日誌記錄 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.15.2</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>2.0.9</version>
         </dependency>
-
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.4.11</version>
         </dependency>
-
-        <!-- 測試依賴 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -110,7 +108,6 @@
 
     <build>
         <finalName>E-Reader-${project.version}</finalName>
-
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -119,9 +116,7 @@
                 </includes>
             </resource>
         </resources>
-
         <plugins>
-            <!-- Maven 編譯器插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -132,8 +127,6 @@
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
-
-            <!-- JavaFX Maven 插件 -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -154,8 +147,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- Maven Shade 插件 - 建立可執行 JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -189,31 +180,28 @@
                 </executions>
             </plugin>
 
-            <!-- JLink 插件 - 建立原生映像 -->
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jlink-plugin</artifactId>
                 <version>3.1.0</version>
-                <configuration>
-                    <stripDebug>true</stripDebug>
-                    <compress>2</compress>
-                    <noHeaderFiles>true</noHeaderFiles>
-                    <noManPages>true</noManPages>
-                    <launcher>e-reader=${main.class}</launcher>
-                    <jlinkImageName>e-reader</jlinkImageName>
-                    <jlinkOutputDirectory>${project.build.directory}/jlink-image</jlinkOutputDirectory>
-                </configuration>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <id>create-runtime</id>
                         <goals>
                             <goal>jlink</goal>
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <stripDebug>true</stripDebug>
+                    <compress>2</compress>
+                    <noHeaderFiles>true</noHeaderFiles>
+                    <noManPages>true</noManPages>
+                    <launcher>e-reader</launcher>
+                    <outputDirectory>${project.build.directory}/e-reader-runtime</outputDirectory>
+                </configuration>
             </plugin>
-
-            <!-- JPackage 插件 - 建立安裝檔 -->
             <plugin>
                 <groupId>org.panteleyev</groupId>
                 <artifactId>jpackage-maven-plugin</artifactId>
@@ -224,15 +212,19 @@
                     <vendor>E-Reader Team</vendor>
                     <destination>${project.build.directory}/installer</destination>
                     <module>E_Reader/${main.class}</module>
-                    <runtimeImage>${project.build.directory}/jlink-image/e-reader</runtimeImage>
+                    <runtimeImage>${project.build.directory}/e-reader-runtime</runtimeImage>
                     <javaOptions>
                         <option>-Dfile.encoding=UTF-8</option>
                         <option>-Djava.awt.headless=false</option>
                     </javaOptions>
-                    <linuxPackageType>DEB</linuxPackageType>
-                    <winDirChooser>true</winDirChooser>
-                    <winShortcut>true</winShortcut>
-                    <winMenu>true</winMenu>
+<!--                    <linuxOptions>-->
+<!--                        <packageType>DEB</packageType>-->
+<!--                    </linuxOptions>-->
+<!--                    <winOptions>-->
+<!--                        <winDirChooser>true</winDirChooser>-->
+<!--                        <winShortcut>true</winShortcut>-->
+<!--                        <winMenu>true</winMenu>-->
+<!--                    </winOptions>-->
                 </configuration>
                 <executions>
                     <execution>
@@ -244,8 +236,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- 測試插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -258,8 +248,6 @@
                     </argLine>
                 </configuration>
             </plugin>
-
-            <!-- 資源複製插件 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -271,9 +259,7 @@
         </plugins>
     </build>
 
-    <!-- 設定檔 -->
     <profiles>
-        <!-- 開發環境 -->
         <profile>
             <id>dev</id>
             <activation>
@@ -283,8 +269,6 @@
                 <maven.test.skip>false</maven.test.skip>
             </properties>
         </profile>
-
-        <!-- 生產環境 -->
         <profile>
             <id>prod</id>
             <properties>
