@@ -1,0 +1,312 @@
+/* E-Reader 樣式表 - 平板友善設計 */
+
+/* 根元素樣式 */
+.root {
+    -fx-background-color: #2b2b2b;
+    -fx-font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", sans-serif;
+}
+
+/* 按鈕基礎樣式 */
+.button {
+    -fx-background-color: #404040;
+    -fx-text-fill: white;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 12px 20px;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0, 0, 2);
+}
+
+.button:hover {
+    -fx-background-color: #505050;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3);
+}
+
+.button:pressed {
+    -fx-background-color: #303030;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
+}
+
+/* 大型按鈕 - 適合觸控操作 */
+.large-button {
+    -fx-padding: 15px 25px;
+    -fx-font-size: 16px;
+    -fx-min-width: 120px;
+    -fx-min-height: 50px;
+}
+
+/* 導航按鈕樣式 */
+.nav-button {
+    -fx-background-color: linear-gradient(to bottom, #4a4a4a, #3a3a3a);
+    -fx-text-fill: white;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 15px 25px;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-min-width: 100px;
+    -fx-min-height: 45px;
+}
+
+.nav-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #5a5a5a, #4a4a4a);
+}
+
+.nav-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+}
+
+/* 控制面板樣式 */
+.control-panel {
+    -fx-background-color: linear-gradient(to bottom, #333333, #2a2a2a);
+    -fx-padding: 15px;
+    -fx-spacing: 15px;
+    -fx-border-color: #555555;
+    -fx-border-width: 0 0 1px 0;
+}
+
+/* 頁面標籤樣式 */
+.page-label {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 20px;
+    -fx-background-color: rgba(0, 0, 0, 0.7);
+    -fx-background-radius: 20px;
+}
+
+/* 輸入欄位樣式 */
+.text-field {
+    -fx-background-color: #404040;
+    -fx-text-fill: white;
+    -fx-border-color: #666666;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 10px 15px;
+    -fx-font-size: 14px;
+    -fx-min-height: 40px;
+}
+
+.text-field:focused {
+    -fx-border-color: #0078d4;
+    -fx-border-width: 2px;
+}
+
+/* 組合框樣式 */
+.combo-box {
+    -fx-background-color: #404040;
+    -fx-text-fill: white;
+    -fx-border-color: #666666;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px;
+    -fx-font-size: 14px;
+    -fx-min-height: 40px;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: #404040;
+    -fx-text-fill: white;
+}
+
+.combo-box .list-cell:selected {
+    -fx-background-color: #0078d4;
+}
+
+/* 核取方塊樣式 */
+.check-box {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+}
+
+.check-box .box {
+    -fx-background-color: #404040;
+    -fx-border-color: #666666;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+    -fx-padding: 3px;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+/* 滑桿樣式 */
+.slider {
+    -fx-background-color: #404040;
+}
+
+.slider .track {
+    -fx-background-color: #666666;
+    -fx-background-radius: 2px;
+}
+
+.slider .thumb {
+    -fx-background-color: #0078d4;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px;
+}
+
+/* 捲軸樣式 */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .corner {
+    -fx-background-color: #404040;
+}
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: rgba(64, 64, 64, 0.5);
+    -fx-background-radius: 5px;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.3);
+    -fx-background-radius: 5px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.5);
+}
+
+.scroll-bar .thumb:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.7);
+}
+
+/* 標籤樣式 */
+.label {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+}
+
+.title-label {
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* 分隔線樣式 */
+.separator {
+    -fx-background-color: #555555;
+}
+
+/* 對話框樣式 */
+.dialog-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #333333;
+}
+
+.dialog-pane .content {
+    -fx-background-color: #2b2b2b;
+}
+
+/* 工具提示樣式 */
+.tooltip {
+    -fx-background-color: rgba(0, 0, 0, 0.9);
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px;
+}
+
+/* 響應式設計 - 平板模式 */
+@media (max-width: 1024px) {
+    .button {
+        -fx-min-height: 50px;
+        -fx-font-size: 16px;
+        -fx-padding: 15px 25px;
+    }
+
+    .control-panel {
+        -fx-padding: 20px;
+        -fx-spacing: 20px;
+    }
+
+    .page-label {
+        -fx-font-size: 18px;
+        -fx-padding: 12px 25px;
+    }
+}
+
+/* 動畫效果 */
+.fade-in {
+    -fx-opacity: 0;
+}
+
+.fade-in:hover {
+    -fx-opacity: 1;
+}
+
+/* 圖片檢視器專用樣式 */
+.image-viewer {
+    -fx-background-color: #1e1e1e;
+    -fx-border-color: #404040;
+    -fx-border-width: 1px;
+}
+
+/* 全螢幕模式樣式 */
+.fullscreen .control-panel {
+    -fx-background-color: rgba(51, 51, 51, 0.9);
+    -fx-background-radius: 10px;
+    -fx-padding: 10px;
+}
+
+/* 載入指示器樣式 */
+.progress-indicator {
+    -fx-progress-color: #0078d4;
+    -fx-background-color: transparent;
+}
+
+/* 選單樣式 */
+.context-menu {
+    -fx-background-color: #404040;
+    -fx-border-color: #666666;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.menu-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 8px 15px;
+}
+
+.menu-item:focused {
+    -fx-background-color: #0078d4;
+}
+
+/* 錯誤訊息樣式 */
+.error-label {
+    -fx-text-fill: #ff6b6b;
+    -fx-font-size: 14px;
+    -fx-padding: 10px;
+    -fx-background-color: rgba(255, 107, 107, 0.1);
+    -fx-background-radius: 5px;
+    -fx-border-color: #ff6b6b;
+    -fx-border-radius: 5px;
+}
+
+/* 成功訊息樣式 */
+.success-label {
+    -fx-text-fill: #51cf66;
+    -fx-font-size: 14px;
+    -fx-padding: 10px;
+    -fx-background-color: rgba(81, 207, 102, 0.1);
+    -fx-background-radius: 5px;
+    -fx-border-color: #51cf66;
+    -fx-border-radius: 5px;
+}

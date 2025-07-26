@@ -1,8 +1,10 @@
 package E_Reader;
 
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 
 import java.util.List;
 
@@ -10,13 +12,32 @@ public class ImageViewer {
 
     private List<Image> images;
     private ImageView imageView = new ImageView();
+    private ScrollPane scrollPane;
     private Label pageLabel = new Label("Page: 0 / 0");
     private int currentIndex = 0;
+    private double zoomLevel = 1.0;
+    private FitMode fitMode = FitMode.FIT_WIDTH;
+
+    public enum FitMode {
+        FIT_WIDTH, FIT_HEIGHT, FIT_PAGE, ORIGINAL_SIZE
+    }
 
     public ImageViewer() {
         imageView.setPreserveRatio(true);
-        imageView.setFitWidth(800);
-        imageView.setFitHeight(600);
+        imageView.setSmooth(true);
+        imageView.setCache(true);
+
+        // 建立可滾動的容器
+        scrollPane = new ScrollPane();
+        scrollPane.setContent(imageView);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background: #1e1e1e; -fx-background-color: #1e1e1e;");
+
+        // 預設尺寸設定
+        setFitToWidth();
     }
 
     public void setImages(List<Image> images) {
@@ -41,21 +62,163 @@ public class ImageViewer {
         }
     }
 
+    public void goToFirstPage() {
+        if (images == null || images.isEmpty()) return;
+        currentIndex = 0;
+        showImage();
+    }
+
+    public void goToLastPage() {
+        if (images == null || images.isEmpty()) return;
+        currentIndex = images.size() - 1;
+        showImage();
+    }
+
+    public void goToPage(int pageIndex) {
+        if (images == null || images.isEmpty()) return;
+        if (pageIndex >= 0 && pageIndex < images.size()) {
+            currentIndex = pageIndex;
+            showImage();
+        }
+    }
+
+    public void zoomIn() {
+        zoomLevel *= 1.2;
+        applyZoom();
+    }
+
+    public void zoomOut() {
+        zoomLevel /= 1.2;
+        if (zoomLevel < 0.1) zoomLevel = 0.1;
+        applyZoom();
+    }
+
+    public void resetZoom() {
+        zoomLevel = 1.0;
+        applySizeMode();
+    }
+
+    public void fitToWidth() {
+        fitMode = FitMode.FIT_WIDTH;
+        applySizeMode();
+    }
+
+    public void fitToHeight() {
+        fitMode = FitMode.FIT_HEIGHT;
+        applySizeMode();
+    }
+
+    public void fitToPage() {
+        fitMode = FitMode.FIT_PAGE;
+        applySizeMode();
+    }
+
+    public void originalSize() {
+        fitMode = FitMode.ORIGINAL_SIZE;
+        applySizeMode();
+    }
+
     private void showImage() {
         if (images == null || images.isEmpty()) {
             imageView.setImage(null);
             pageLabel.setText("Page: 0 / 0");
             return;
         }
-        imageView.setImage(images.get(currentIndex));
+
+        Image currentImage = images.get(currentIndex);
+        imageView.setImage(currentImage);
         pageLabel.setText("Page: " + (currentIndex + 1) + " / " + images.size());
+
+        // 套用目前的尺寸模式
+        applySizeMode();
     }
 
+    private void applySizeMode() {
+        if (images == null || images.isEmpty()) return;
+
+        Image currentImage = images.get(currentIndex);
+        double imageWidth = currentImage.getWidth();
+        double imageHeight = currentImage.getHeight();
+
+        switch (fitMode) {
+            case FIT_WIDTH:
+                setFitToWidth();
+                break;
+            case FIT_HEIGHT:
+                setFitToHeight();
+                break;
+            case FIT_PAGE:
+                setFitToPage();
+                break;
+            case ORIGINAL_SIZE:
+                imageView.setFitWidth(imageWidth * zoomLevel);
+                imageView.setFitHeight(imageHeight * zoomLevel);
+                break;
+        }
+    }
+
+    private void setFitToWidth() {
+        imageView.setFitWidth(800 * zoomLevel);
+        imageView.setFitHeight(0); // 自動計算高度
+    }
+
+    private void setFitToHeight() {
+        imageView.setFitHeight(600 * zoomLevel);
+        imageView.setFitWidth(0); // 自動計算寬度
+    }
+
+    private void setFitToPage() {
+        imageView.setFitWidth(800 * zoomLevel);
+        imageView.setFitHeight(600 * zoomLevel);
+    }
+
+    private void applyZoom() {
+        applySizeMode();
+    }
+
+    // Getter 方法
     public ImageView getImageView() {
         return imageView;
     }
 
+    public ScrollPane getScrollPane() {
+        return scrollPane;
+    }
+
     public Label getPageLabel() {
         return pageLabel;
+    }
+
+    public int getCurrentIndex() {
+        return currentIndex;
+    }
+
+    public int getTotalPages() {
+        return images != null ? images.size() : 0;
+    }
+
+    public double getZoomLevel() {
+        return zoomLevel;
+    }
+
+    public FitMode getFitMode() {
+        return fitMode;
+    }
+
+    public void setFitMode(FitMode fitMode) {
+        this.fitMode = fitMode;
+        applySizeMode();
+    }
+
+    public boolean hasImages() {
+        return images != null && !images.isEmpty();
+    }
+
+    public boolean canGoNext() {
+        return hasImages() && currentIndex < images.size() - 1;
+    }
+
+    public boolean canGoPrevious() {
+        return hasImages() && currentIndex > 0;
     }
 }
