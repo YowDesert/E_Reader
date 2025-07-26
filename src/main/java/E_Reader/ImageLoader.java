@@ -1,12 +1,12 @@
 package E_Reader;
 
-import javafx.scene.image.Image;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+
+import javafx.scene.image.Image;
 
 public class ImageLoader {
 
