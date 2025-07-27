@@ -2,24 +2,30 @@ package E_Reader;
 
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.scene.paint.Color;
 import javafx.scene.control.Label;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.application.Platform;
 
 import java.util.List;
+import java.util.ArrayList;
 
 public class TextRenderer {
 
+    private StackPane mainContainer;
     private ScrollPane scrollPane;
-    private VBox contentContainer;
-    private List<TextExtractor.PageText> pages;
+    private VBox pageContainer;
+    private List<TextExtractor.PageText> originalPages;
+    private List<TextPage> formattedPages;
     private int currentPageIndex = 0;
 
     // 樣式設定
@@ -29,206 +35,444 @@ public class TextRenderer {
     private Color highlightColor = Color.web("#ffff00");
     private Color highlightTextColor = Color.web("#000000");
 
-    private double baseFontSize = 16.0;
-    private Font textFont = Font.font("Microsoft JhengHei", baseFontSize);
-    private Font headerFont = Font.font("Microsoft JhengHei", FontWeight.BOLD, baseFontSize * 1.25);
-    private double lineSpacing = 1.5;
-    private double paragraphSpacing = 20;
-    private double pageMargin = 40;
+    private double baseFontSize = 18.0;
+    private Font textFont;
+    private Font headerFont;
+    private double lineSpacing = 1.8;
+    private double paragraphSpacing = 24;
+    private double pageMarginHorizontal = 60;
+    private double pageMarginVertical = 40;
 
     // 搜尋相關
     private String currentSearchTerm = "";
 
+    // 版面設定
+    private DisplayMode displayMode = DisplayMode.PAGE_BY_PAGE;
+    private DeviceOrientation orientation = DeviceOrientation.PORTRAIT;
+    private DeviceType deviceType = DeviceType.DESKTOP;
+
+    public enum DisplayMode {
+        PAGE_BY_PAGE,    // 一頁一頁顯示
+        CONTINUOUS,      // 連續滾動
+        TWO_PAGE         // 雙頁顯示（橫式時）
+    }
+
+    public enum DeviceOrientation {
+        PORTRAIT,        // 直式
+        LANDSCAPE        // 橫式
+    }
+
+    public enum DeviceType {
+        DESKTOP,         // 桌面電腦
+        TABLET           // 平板
+    }
+
     public TextRenderer() {
+        initializeFonts();
         initializeComponents();
+        setupResponsiveLayout();
+    }
+
+    private void initializeFonts() {
+        try {
+            textFont = Font.font("Microsoft JhengHei", baseFontSize);
+            headerFont = Font.font("Microsoft JhengHei", FontWeight.BOLD, baseFontSize * 1.2);
+        } catch (Exception e) {
+            // 如果指定字體不可用，使用系統預設字體
+            textFont = Font.font("System", baseFontSize);
+            headerFont = Font.font("System", FontWeight.BOLD, baseFontSize * 1.2);
+        }
     }
 
     private void initializeComponents() {
-        contentContainer = new VBox();
-        contentContainer.setPadding(new Insets(pageMargin));
-        contentContainer.setSpacing(paragraphSpacing);
+        // 主容器
+        mainContainer = new StackPane();
+        mainContainer.setAlignment(Pos.CENTER);
 
-        scrollPane = new ScrollPane(contentContainer);
+        // 頁面容器
+        pageContainer = new VBox();
+        pageContainer.setAlignment(Pos.CENTER);
+        pageContainer.setSpacing(0);
+
+        // 滾動面板
+        scrollPane = new ScrollPane();
+        scrollPane.setContent(pageContainer);
         scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(false);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        // 添加到主容器
+        mainContainer.getChildren().add(scrollPane);
 
         applyTheme();
     }
 
-    /**
-     * 設定要渲染的頁面文字
-     */
-    public void setPages(List<TextExtractor.PageText> pages) {
-        this.pages = pages;
-        currentPageIndex = 0;
-        renderAllPages();
+    private void setupResponsiveLayout() {
+        // 監聽容器尺寸變化
+        mainContainer.widthProperty().addListener((obs, oldWidth, newWidth) -> {
+            if (newWidth.doubleValue() > 0) {
+                Platform.runLater(() -> updateLayoutForSize());
+            }
+        });
+
+        mainContainer.heightProperty().addListener((obs, oldHeight, newHeight) -> {
+            if (newHeight.doubleValue() > 0) {
+                Platform.runLater(() -> updateLayoutForSize());
+            }
+        });
     }
 
-    /**
-     * 渲染所有頁面
-     */
-    private void renderAllPages() {
-        if (pages == null || pages.isEmpty()) {
+    private void updateLayoutForSize() {
+        double width = mainContainer.getWidth();
+        double height = mainContainer.getHeight();
+
+        if (width <= 0 || height <= 0) return;
+
+        // 判斷設備類型和方向
+        if (width < 800) {
+            deviceType = DeviceType.TABLET;
+        } else {
+            deviceType = DeviceType.DESKTOP;
+        }
+
+        if (width > height) {
+            orientation = DeviceOrientation.LANDSCAPE;
+        } else {
+            orientation = DeviceOrientation.PORTRAIT;
+        }
+
+        // 調整版面設定
+        adjustLayoutSettings();
+
+        // 重新格式化頁面
+        if (originalPages != null && !originalPages.isEmpty()) {
+            formatPages();
+            renderCurrentPage();
+        }
+    }
+
+    private void adjustLayoutSettings() {
+        switch (deviceType) {
+            case TABLET:
+                if (orientation == DeviceOrientation.PORTRAIT) {
+                    baseFontSize = 20.0;
+                    pageMarginHorizontal = 40;
+                    pageMarginVertical = 30;
+                    lineSpacing = 2.0;
+                    paragraphSpacing = 28;
+                } else {
+                    baseFontSize = 18.0;
+                    pageMarginHorizontal = 80;
+                    pageMarginVertical = 40;
+                    lineSpacing = 1.8;
+                    paragraphSpacing = 24;
+                    displayMode = DisplayMode.TWO_PAGE;
+                }
+                break;
+
+            case DESKTOP:
+                if (orientation == DeviceOrientation.PORTRAIT) {
+                    baseFontSize = 18.0;
+                    pageMarginHorizontal = 80;
+                    pageMarginVertical = 50;
+                    lineSpacing = 1.8;
+                    paragraphSpacing = 26;
+                } else {
+                    baseFontSize = 16.0;
+                    pageMarginHorizontal = 120;
+                    pageMarginVertical = 60;
+                    lineSpacing = 1.6;
+                    paragraphSpacing = 22;
+                }
+                break;
+        }
+
+        updateFonts();
+    }
+
+    private void updateFonts() {
+        try {
+            textFont = Font.font("Microsoft JhengHei", baseFontSize);
+            headerFont = Font.font("Microsoft JhengHei", FontWeight.BOLD, baseFontSize * 1.2);
+        } catch (Exception e) {
+            textFont = Font.font("System", baseFontSize);
+            headerFont = Font.font("System", FontWeight.BOLD, baseFontSize * 1.2);
+        }
+    }
+
+    public void setPages(List<TextExtractor.PageText> pages) {
+        this.originalPages = pages;
+        if (pages != null && !pages.isEmpty()) {
+            formatPages();
+            currentPageIndex = 0;
+            renderCurrentPage();
+        } else {
+            showNoContentMessage();
+        }
+    }
+
+    private void formatPages() {
+        if (originalPages == null || originalPages.isEmpty()) {
+            return;
+        }
+
+        formattedPages = new ArrayList<>();
+
+        for (TextExtractor.PageText originalPage : originalPages) {
+            List<String> paragraphs = originalPage.getFormattedParagraphs();
+
+            if (paragraphs.isEmpty()) {
+                TextPage emptyPage = new TextPage();
+                emptyPage.pageNumber = originalPage.getPageNumber();
+                emptyPage.paragraphs = new ArrayList<>();
+                emptyPage.isEmpty = true;
+                formattedPages.add(emptyPage);
+                continue;
+            }
+
+            TextPage currentTextPage = new TextPage();
+            currentTextPage.pageNumber = originalPage.getPageNumber();
+            currentTextPage.originalPageText = originalPage;
+            currentTextPage.paragraphs = new ArrayList<>();
+
+            for (String paragraph : paragraphs) {
+                if (!paragraph.trim().isEmpty()) {
+                    currentTextPage.paragraphs.add(paragraph.trim());
+                }
+            }
+
+            formattedPages.add(currentTextPage);
+        }
+    }
+
+    private void renderCurrentPage() {
+        if (formattedPages == null || formattedPages.isEmpty()) {
             showNoContentMessage();
             return;
         }
 
-        contentContainer.getChildren().clear();
+        pageContainer.getChildren().clear();
 
-        for (int i = 0; i < pages.size(); i++) {
-            TextExtractor.PageText page = pages.get(i);
-            renderPage(page);
-
-            // 在頁面之間添加分隔符
-            if (i < pages.size() - 1) {
-                addPageSeparator(i + 1);
-            }
+        if (displayMode == DisplayMode.PAGE_BY_PAGE) {
+            renderSinglePage();
+        } else if (displayMode == DisplayMode.TWO_PAGE && orientation == DeviceOrientation.LANDSCAPE) {
+            renderTwoPages();
+        } else {
+            renderContinuousPages();
         }
     }
 
-    /**
-     * 渲染單個頁面
-     */
-    private void renderPage(TextExtractor.PageText page) {
-        // 頁面標題
-        Label pageHeader = createPageHeader(page);
-        contentContainer.getChildren().add(pageHeader);
-
-        // 獲取格式化的段落
-        List<String> paragraphs = page.getFormattedParagraphs();
-
-        if (paragraphs.isEmpty()) {
-            Label noTextLabel = new Label("本頁無文字內容或文字提取失敗");
-            noTextLabel.setTextFill(Color.web("#888888"));
-            noTextLabel.setFont(Font.font("Microsoft JhengHei", baseFontSize * 0.875));
-            contentContainer.getChildren().add(noTextLabel);
+    private void renderSinglePage() {
+        if (currentPageIndex < 0 || currentPageIndex >= formattedPages.size()) {
             return;
         }
 
-        // 渲染段落
-        for (String paragraph : paragraphs) {
-            if (!paragraph.trim().isEmpty()) {
-                TextFlow textFlow = createParagraphTextFlow(paragraph);
-                contentContainer.getChildren().add(textFlow);
+        TextPage page = formattedPages.get(currentPageIndex);
+        VBox pageView = createPageView(page);
+
+        pageContainer.getChildren().clear();
+        pageContainer.getChildren().add(pageView);
+        pageContainer.setAlignment(Pos.CENTER);
+
+        Platform.runLater(() -> scrollPane.setVvalue(0));
+    }
+
+    private void renderTwoPages() {
+        pageContainer.getChildren().clear();
+
+        javafx.scene.layout.HBox twoPageContainer = new javafx.scene.layout.HBox();
+        twoPageContainer.setAlignment(Pos.CENTER);
+        twoPageContainer.setSpacing(40);
+        twoPageContainer.setPadding(new Insets(pageMarginVertical, pageMarginHorizontal, pageMarginVertical, pageMarginHorizontal));
+
+        if (currentPageIndex < formattedPages.size()) {
+            TextPage leftPage = formattedPages.get(currentPageIndex);
+            VBox leftPageView = createPageView(leftPage);
+            leftPageView.setPrefWidth(mainContainer.getWidth() / 2 - 100);
+            twoPageContainer.getChildren().add(leftPageView);
+        }
+
+        if (currentPageIndex + 1 < formattedPages.size()) {
+            TextPage rightPage = formattedPages.get(currentPageIndex + 1);
+            VBox rightPageView = createPageView(rightPage);
+            rightPageView.setPrefWidth(mainContainer.getWidth() / 2 - 100);
+            twoPageContainer.getChildren().add(rightPageView);
+        }
+
+        pageContainer.getChildren().add(twoPageContainer);
+        Platform.runLater(() -> scrollPane.setVvalue(0));
+    }
+
+    private void renderContinuousPages() {
+        pageContainer.getChildren().clear();
+
+        for (TextPage page : formattedPages) {
+            VBox pageView = createPageView(page);
+            pageView.setStyle(pageView.getStyle() + "; -fx-border-color: #444444; -fx-border-width: 0 0 2 0; -fx-border-style: dashed;");
+            pageContainer.getChildren().add(pageView);
+
+            if (formattedPages.indexOf(page) < formattedPages.size() - 1) {
+                Label spacer = new Label();
+                spacer.setPrefHeight(40);
+                pageContainer.getChildren().add(spacer);
             }
         }
     }
 
-    /**
-     * 創建頁面標題
-     */
-    private Label createPageHeader(TextExtractor.PageText page) {
-        String headerText = String.format("第 %d 頁 (%s)",
-                page.getPageNumber() + 1,
-                page.getTextSource().getDisplayName());
+    private VBox createPageView(TextPage page) {
+        VBox pageView = new VBox();
+        pageView.setAlignment(Pos.TOP_CENTER);
+        pageView.setSpacing(paragraphSpacing);
+        pageView.setPadding(new Insets(pageMarginVertical, pageMarginHorizontal, pageMarginVertical, pageMarginHorizontal));
+        pageView.setMaxWidth(calculateOptimalPageWidth());
+
+        BackgroundFill backgroundFill = new BackgroundFill(backgroundColor, new CornerRadii(10), Insets.EMPTY);
+        pageView.setBackground(new Background(backgroundFill));
+
+        Label pageHeader = createPageHeader(page);
+        pageView.getChildren().add(pageHeader);
+
+        if (page.isEmpty || page.paragraphs.isEmpty()) {
+            Label noTextLabel = new Label("本頁無文字內容");
+            noTextLabel.setTextFill(Color.web("#888888"));
+            noTextLabel.setFont(Font.font(textFont.getFamily(), baseFontSize * 0.875));
+            noTextLabel.setAlignment(Pos.CENTER);
+            pageView.getChildren().add(noTextLabel);
+            return pageView;
+        }
+
+        for (String paragraph : page.paragraphs) {
+            TextFlow paragraphFlow = createParagraphTextFlow(paragraph);
+            pageView.getChildren().add(paragraphFlow);
+        }
+
+        return pageView;
+    }
+
+    private double calculateOptimalPageWidth() {
+        double containerWidth = mainContainer.getWidth();
+
+        if (containerWidth <= 0) {
+            return deviceType == DeviceType.TABLET ? 600 : 800;
+        }
+
+        switch (deviceType) {
+            case TABLET:
+                if (orientation == DeviceOrientation.PORTRAIT) {
+                    return Math.min(containerWidth - 80, 700);
+                } else {
+                    return Math.min(containerWidth - 160, 900);
+                }
+            case DESKTOP:
+                if (orientation == DeviceOrientation.PORTRAIT) {
+                    return Math.min(containerWidth - 160, 900);
+                } else {
+                    return Math.min(containerWidth - 240, 1200);
+                }
+            default:
+                return 800;
+        }
+    }
+
+    private Label createPageHeader(TextPage page) {
+        String headerText;
+        if (page.originalPageText != null) {
+            headerText = String.format("第 %d 頁", page.pageNumber + 1);
+        } else {
+            headerText = String.format("頁面 %d", page.pageNumber + 1);
+        }
 
         Label header = new Label(headerText);
         header.setTextFill(headerColor);
         header.setFont(headerFont);
-        header.setPadding(new Insets(20, 0, 10, 0));
+        header.setAlignment(Pos.CENTER);
+        header.setPadding(new Insets(0, 0, paragraphSpacing, 0));
 
         return header;
     }
 
-    /**
-     * 創建段落文字流
-     */
     private TextFlow createParagraphTextFlow(String paragraph) {
         TextFlow textFlow = new TextFlow();
         textFlow.setLineSpacing(lineSpacing);
-        textFlow.setPadding(new Insets(0, 0, paragraphSpacing, 0));
+        textFlow.setPadding(new Insets(0, 0, paragraphSpacing * 0.8, 0));
+        textFlow.setMaxWidth(Double.MAX_VALUE);
 
         if (currentSearchTerm.isEmpty()) {
-            // 沒有搜尋詞，直接顯示文字
             Text text = new Text(paragraph);
             text.setFill(textColor);
             text.setFont(textFont);
             textFlow.getChildren().add(text);
         } else {
-            // 有搜尋詞，需要高亮顯示
             addHighlightedText(textFlow, paragraph, currentSearchTerm);
         }
 
         return textFlow;
     }
 
-    /**
-     * 添加頁面分隔符
-     */
-    private void addPageSeparator(int nextPageNumber) {
-        VBox separator = new VBox();
-        separator.setPrefHeight(30);
-        separator.setStyle("-fx-border-color: #444444; -fx-border-width: 0 0 1 0; -fx-border-style: dashed;");
-
-        Label separatorLabel = new Label("--- 第 " + nextPageNumber + " 頁 ---");
-        separatorLabel.setTextFill(Color.web("#666666"));
-        separatorLabel.setFont(Font.font("Microsoft JhengHei", baseFontSize * 0.75));
-        separatorLabel.setPadding(new Insets(10));
-
-        separator.getChildren().add(separatorLabel);
-        contentContainer.getChildren().add(separator);
-    }
-
-    /**
-     * 顯示無內容訊息
-     */
     private void showNoContentMessage() {
-        contentContainer.getChildren().clear();
+        pageContainer.getChildren().clear();
+
+        VBox messageContainer = new VBox();
+        messageContainer.setAlignment(Pos.CENTER);
+        messageContainer.setPadding(new Insets(100));
 
         Label messageLabel = new Label("尚未載入任何文件\n請選擇PDF檔案或圖片資料夾，然後切換到文字模式");
         messageLabel.setTextFill(Color.web("#888888"));
-        messageLabel.setFont(Font.font("Microsoft JhengHei", baseFontSize * 1.125));
+        messageLabel.setFont(Font.font(textFont.getFamily(), baseFontSize * 1.125));
         messageLabel.setStyle("-fx-text-alignment: center;");
+        messageLabel.setWrapText(true);
 
-        contentContainer.getChildren().add(messageLabel);
+        messageContainer.getChildren().add(messageLabel);
+        pageContainer.getChildren().add(messageContainer);
     }
 
-    /**
-     * 跳轉到指定頁面
-     */
     public void goToPage(int pageIndex) {
-        if (pages == null || pageIndex < 0 || pageIndex >= pages.size()) {
+        if (formattedPages == null || pageIndex < 0 || pageIndex >= formattedPages.size()) {
             return;
         }
 
         currentPageIndex = pageIndex;
-
-        // 計算頁面在容器中的位置
-        double pagePosition = calculatePagePosition(pageIndex);
-
-        // 滾動到指定位置
-        scrollPane.setVvalue(pagePosition);
+        renderCurrentPage();
     }
 
-    /**
-     * 計算頁面在滾動容器中的相對位置
-     */
-    private double calculatePagePosition(int pageIndex) {
-        if (pages == null || pages.isEmpty()) {
-            return 0;
+    public void nextPage() {
+        if (displayMode == DisplayMode.TWO_PAGE && orientation == DeviceOrientation.LANDSCAPE) {
+            if (currentPageIndex + 2 < formattedPages.size()) {
+                currentPageIndex += 2;
+                renderCurrentPage();
+            }
+        } else {
+            if (currentPageIndex + 1 < formattedPages.size()) {
+                currentPageIndex++;
+                renderCurrentPage();
+            }
         }
-
-        // 簡單計算：假設每頁占用相等空間
-        return (double) pageIndex / Math.max(1, pages.size() - 1);
     }
 
-    /**
-     * 應用主題樣式
-     */
+    public void previousPage() {
+        if (displayMode == DisplayMode.TWO_PAGE && orientation == DeviceOrientation.LANDSCAPE) {
+            if (currentPageIndex - 2 >= 0) {
+                currentPageIndex -= 2;
+                renderCurrentPage();
+            }
+        } else {
+            if (currentPageIndex > 0) {
+                currentPageIndex--;
+                renderCurrentPage();
+            }
+        }
+    }
+
     public void applyTheme() {
-        // 設定背景色
         BackgroundFill backgroundFill = new BackgroundFill(backgroundColor, CornerRadii.EMPTY, Insets.EMPTY);
         Background background = new Background(backgroundFill);
+        mainContainer.setBackground(background);
 
-        contentContainer.setBackground(background);
         scrollPane.setStyle(String.format("-fx-background: %s; -fx-background-color: %s;",
                 toHexString(backgroundColor), toHexString(backgroundColor)));
     }
 
-    /**
-     * 設定主題色彩
-     */
     public void setThemeColors(SettingsPanel.ThemeMode theme) {
         switch (theme) {
             case LIGHT:
@@ -270,128 +514,42 @@ public class TextRenderer {
 
         applyTheme();
 
-        // 重新渲染以應用新顏色
-        if (pages != null && !pages.isEmpty()) {
-            renderAllPages();
+        if (formattedPages != null && !formattedPages.isEmpty()) {
+            renderCurrentPage();
         }
     }
 
-    /**
-     * 設定字體大小
-     */
-    public void setFontSize(double size) {
-        if (size < 8) size = 8;   // 最小字體大小
-        if (size > 72) size = 72; // 最大字體大小
-
-        baseFontSize = size;
-        textFont = Font.font(textFont.getFamily(), size);
-        headerFont = Font.font(headerFont.getFamily(), FontWeight.BOLD, size * 1.25);
-
-        // 重新渲染
-        if (pages != null && !pages.isEmpty()) {
-            renderAllPages();
-        }
-    }
-
-    /**
-     * 調整字體大小
-     */
-    public void adjustFontSize(double delta) {
-        setFontSize(baseFontSize + delta);
-    }
-
-    /**
-     * 設定行距
-     */
-    public void setLineSpacing(double spacing) {
-        if (spacing < 0.5) spacing = 0.5;   // 最小行距
-        if (spacing > 5.0) spacing = 5.0;   // 最大行距
-
-        this.lineSpacing = spacing;
-
-        // 重新渲染
-        if (pages != null && !pages.isEmpty()) {
-            renderAllPages();
-        }
-    }
-
-    /**
-     * 設定段落間距
-     */
-    public void setParagraphSpacing(double spacing) {
-        if (spacing < 5) spacing = 5;       // 最小段落間距
-        if (spacing > 50) spacing = 50;     // 最大段落間距
-
-        this.paragraphSpacing = spacing;
-        contentContainer.setSpacing(spacing);
-
-        // 重新渲染
-        if (pages != null && !pages.isEmpty()) {
-            renderAllPages();
-        }
-    }
-
-    /**
-     * 設定頁面邊距
-     */
-    public void setPageMargin(double margin) {
-        if (margin < 10) margin = 10;       // 最小邊距
-        if (margin > 100) margin = 100;     // 最大邊距
-
-        this.pageMargin = margin;
-        contentContainer.setPadding(new Insets(margin));
-    }
-
-    /**
-     * 搜尋文字
-     */
     public void searchText(String searchTerm) {
-        if (pages == null || searchTerm == null) {
+        if (originalPages == null || searchTerm == null) {
             return;
         }
 
         currentSearchTerm = searchTerm.trim();
+        renderCurrentPage();
 
-        // 重新渲染以顯示搜尋結果
-        renderAllPages();
-
-        // 如果有搜尋結果，跳轉到第一個匹配項
         if (!currentSearchTerm.isEmpty()) {
             scrollToFirstMatch();
         }
     }
 
-    /**
-     * 清除搜尋高亮
-     */
-    public void clearSearch() {
-        currentSearchTerm = "";
-        renderAllPages();
-    }
-
-    /**
-     * 滾動到第一個搜尋匹配項
-     */
     private void scrollToFirstMatch() {
-        if (currentSearchTerm.isEmpty() || pages == null) {
+        if (currentSearchTerm.isEmpty() || formattedPages == null) {
             return;
         }
 
         String lowerSearchTerm = currentSearchTerm.toLowerCase();
 
-        for (int i = 0; i < pages.size(); i++) {
-            String pageText = pages.get(i).getBestText().toLowerCase();
-            if (pageText.contains(lowerSearchTerm)) {
-                goToPage(i);
-                currentPageIndex = i;
-                break;
+        for (int i = 0; i < formattedPages.size(); i++) {
+            TextPage page = formattedPages.get(i);
+            for (String paragraph : page.paragraphs) {
+                if (paragraph.toLowerCase().contains(lowerSearchTerm)) {
+                    goToPage(i);
+                    return;
+                }
             }
         }
     }
 
-    /**
-     * 添加高亮文字到TextFlow
-     */
     private void addHighlightedText(TextFlow textFlow, String paragraph, String searchTerm) {
         String lowerParagraph = paragraph.toLowerCase();
         String lowerSearchTerm = searchTerm.toLowerCase();
@@ -400,7 +558,6 @@ public class TextRenderer {
         int index = lowerParagraph.indexOf(lowerSearchTerm, lastIndex);
 
         while (index != -1) {
-            // 添加搜尋詞之前的文字
             if (index > lastIndex) {
                 Text beforeText = new Text(paragraph.substring(lastIndex, index));
                 beforeText.setFill(textColor);
@@ -408,7 +565,6 @@ public class TextRenderer {
                 textFlow.getChildren().add(beforeText);
             }
 
-            // 添加高亮的搜尋詞
             Text highlightText = new Text(paragraph.substring(index, index + searchTerm.length()));
             highlightText.setFill(highlightTextColor);
             highlightText.setFont(textFont);
@@ -419,7 +575,6 @@ public class TextRenderer {
             index = lowerParagraph.indexOf(lowerSearchTerm, lastIndex);
         }
 
-        // 添加剩餘的文字
         if (lastIndex < paragraph.length()) {
             Text remainingText = new Text(paragraph.substring(lastIndex));
             remainingText.setFill(textColor);
@@ -428,102 +583,6 @@ public class TextRenderer {
         }
     }
 
-    /**
-     * 獲取下一個搜尋結果
-     */
-    public boolean findNext() {
-        if (currentSearchTerm.isEmpty() || pages == null) {
-            return false;
-        }
-
-        String lowerSearchTerm = currentSearchTerm.toLowerCase();
-
-        // 從當前頁面的下一頁開始搜尋
-        for (int i = currentPageIndex + 1; i < pages.size(); i++) {
-            String pageText = pages.get(i).getBestText().toLowerCase();
-            if (pageText.contains(lowerSearchTerm)) {
-                goToPage(i);
-                currentPageIndex = i;
-                return true;
-            }
-        }
-
-        // 如果沒找到，從頭開始搜尋到當前頁面
-        for (int i = 0; i <= currentPageIndex; i++) {
-            String pageText = pages.get(i).getBestText().toLowerCase();
-            if (pageText.contains(lowerSearchTerm)) {
-                goToPage(i);
-                currentPageIndex = i;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 獲取上一個搜尋結果
-     */
-    public boolean findPrevious() {
-        if (currentSearchTerm.isEmpty() || pages == null) {
-            return false;
-        }
-
-        String lowerSearchTerm = currentSearchTerm.toLowerCase();
-
-        // 從當前頁面的上一頁開始向前搜尋
-        for (int i = currentPageIndex - 1; i >= 0; i--) {
-            String pageText = pages.get(i).getBestText().toLowerCase();
-            if (pageText.contains(lowerSearchTerm)) {
-                goToPage(i);
-                currentPageIndex = i;
-                return true;
-            }
-        }
-
-        // 如果沒找到，從最後一頁開始搜尋到當前頁面
-        for (int i = pages.size() - 1; i >= currentPageIndex; i--) {
-            String pageText = pages.get(i).getBestText().toLowerCase();
-            if (pageText.contains(lowerSearchTerm)) {
-                goToPage(i);
-                currentPageIndex = i;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 導出文字內容
-     */
-    public String exportText() {
-        if (pages == null || pages.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < pages.size(); i++) {
-            TextExtractor.PageText page = pages.get(i);
-            sb.append("=== 第 ").append(i + 1).append(" 頁 ===\n");
-
-            List<String> paragraphs = page.getFormattedParagraphs();
-            for (String paragraph : paragraphs) {
-                if (!paragraph.trim().isEmpty()) {
-                    sb.append(paragraph).append("\n\n");
-                }
-            }
-
-            if (i < pages.size() - 1) {
-                sb.append("\n");
-            }
-        }
-
-        return sb.toString();
-    }
-
-    // 輔助方法
     private String toHexString(Color color) {
         return String.format("#%02X%02X%02X",
                 (int) (color.getRed() * 255),
@@ -532,6 +591,10 @@ public class TextRenderer {
     }
 
     // Getter 方法
+    public StackPane getMainContainer() {
+        return mainContainer;
+    }
+
     public ScrollPane getScrollPane() {
         return scrollPane;
     }
@@ -541,41 +604,66 @@ public class TextRenderer {
     }
 
     public int getTotalPages() {
-        return pages != null ? pages.size() : 0;
+        return formattedPages != null ? formattedPages.size() : 0;
     }
 
     public boolean hasContent() {
-        return pages != null && !pages.isEmpty();
+        return formattedPages != null && !formattedPages.isEmpty();
     }
 
     public double getFontSize() {
         return baseFontSize;
     }
 
-    public double getLineSpacing() {
-        return lineSpacing;
+    public DisplayMode getDisplayMode() {
+        return displayMode;
     }
 
-    public double getParagraphSpacing() {
-        return paragraphSpacing;
+    public void setDisplayMode(DisplayMode displayMode) {
+        this.displayMode = displayMode;
+        if (formattedPages != null && !formattedPages.isEmpty()) {
+            renderCurrentPage();
+        }
     }
 
-    public double getPageMargin() {
-        return pageMargin;
+    public DeviceOrientation getOrientation() {
+        return orientation;
     }
 
-    public String getCurrentSearchTerm() {
-        return currentSearchTerm;
+    public DeviceType getDeviceType() {
+        return deviceType;
     }
 
-    public List<TextExtractor.PageText> getPages() {
-        return pages;
+    public void setLineSpacing(double spacing) {
+        if (spacing < 0.5) spacing = 0.5;
+        if (spacing > 5.0) spacing = 5.0;
+
+        this.lineSpacing = spacing;
+        if (formattedPages != null && !formattedPages.isEmpty()) {
+            renderCurrentPage();
+        }
     }
 
-    // Setter 方法
-    public void setCurrentPageIndex(int pageIndex) {
-        if (pageIndex >= 0 && pageIndex < getTotalPages()) {
-            this.currentPageIndex = pageIndex;
+    public void setFontSize(double size) {
+        if (size < 8) size = 8;
+        if (size > 72) size = 72;
+
+        baseFontSize = size;
+        updateFonts();
+
+        if (formattedPages != null && !formattedPages.isEmpty()) {
+            renderCurrentPage();
+        }
+    }
+
+    private static class TextPage {
+        int pageNumber;
+        List<String> paragraphs;
+        TextExtractor.PageText originalPageText;
+        boolean isEmpty = false;
+
+        TextPage() {
+            paragraphs = new ArrayList<>();
         }
     }
 }

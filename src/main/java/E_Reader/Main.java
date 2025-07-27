@@ -31,7 +31,7 @@ public class Main extends Application {
     private BookmarkManager bookmarkManager = new BookmarkManager();
 
     private boolean isPdfMode = false;
-    private boolean isTextMode = false; // 新增：文字模式標記
+    private boolean isTextMode = false;
     private String currentFilePath = "";
     private Stage primaryStage;
     private boolean isFullScreen = false;
@@ -57,6 +57,12 @@ public class Main extends Application {
     private StackPane centerPane;
     private List<Image> currentImages;
     private List<TextExtractor.PageText> currentTextPages;
+
+    // UI 控制項參考
+    private Label pageLabel;
+    private TextField pageField;
+    private Button textModeBtn;
+    private Button autoScrollBtn;
 
     @Override
     public void start(Stage primaryStage) {
@@ -86,7 +92,9 @@ public class Main extends Application {
         setupKeyboardShortcuts(root);
 
         Scene scene = new Scene(root, 1200, 800);
-        scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+
+        // 添加基本樣式
+        scene.getRoot().setStyle("-fx-font-family: 'Microsoft JhengHei', sans-serif;");
 
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -144,11 +152,11 @@ public class Main extends Application {
         Button exitBtn = new Button("❌ 離開");
 
         // 新增功能按鈕
-        Button autoScrollBtn = new Button("⏯️ 自動翻頁");
+        autoScrollBtn = new Button("⏯️ 自動翻頁");
         Button nightModeBtn = new Button("🌙 夜間模式");
         Button eyeCareBtn = new Button("👁️ 護眼模式");
-        Button textModeBtn = new Button("📖 文字模式"); // 新增：文字模式按鈕
-        Button searchBtn = new Button("🔍 搜尋文字"); // 新增：搜尋功能按鈕
+        textModeBtn = new Button("📖 文字模式");
+        Button searchBtn = new Button("🔍 搜尋文字");
 
         // 設定按鈕樣式
         String buttonStyle = "-fx-background-color: #404040; -fx-text-fill: white; " +
@@ -174,7 +182,7 @@ public class Main extends Application {
         Button lastPageBtn = new Button("末頁 ⏭️");
 
         // 頁面跳轉
-        TextField pageField = new TextField();
+        pageField = new TextField();
         pageField.setPrefWidth(60);
         pageField.setPromptText("頁數");
         Button goToPageBtn = new Button("跳轉");
@@ -191,11 +199,11 @@ public class Main extends Application {
         Button speedReadBtn = new Button("⚡ 快速閱讀");
 
         // 文字模式專用控制
-        Button fontSizeIncBtn = new Button("A+"); // 增大字體
-        Button fontSizeDecBtn = new Button("A-"); // 縮小字體
-        Button lineSpacingBtn = new Button("📏 行距"); // 調整行距
+        Button fontSizeIncBtn = new Button("A+");
+        Button fontSizeDecBtn = new Button("A-");
+        Button lineSpacingBtn = new Button("📏 行距");
 
-        Label pageLabel = isTextMode ? new Label("文字: 0 / 0") : imageViewer.getPageLabel();
+        pageLabel = new Label("頁面: 0 / 0");
         pageLabel.setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
 
         // 設定下方按鈕樣式
@@ -311,7 +319,6 @@ public class Main extends Application {
         });
     }
 
-    // 新增：切換文字模式
     private void toggleTextMode() {
         if (currentFilePath.isEmpty()) {
             AlertHelper.showError("提示", "請先開啟檔案");
@@ -321,10 +328,12 @@ public class Main extends Application {
         isTextMode = !isTextMode;
 
         if (isTextMode) {
-            // 切換到文字模式
+            textModeBtn.setText("🖼️ 圖片模式");
+            textModeBtn.setStyle(textModeBtn.getStyle() + "; -fx-background-color: #28a745;");
             switchToTextMode();
         } else {
-            // 切換回圖片模式
+            textModeBtn.setText("📖 文字模式");
+            textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
             switchToImageMode();
         }
 
@@ -333,35 +342,28 @@ public class Main extends Application {
 
     private void switchToTextMode() {
         try {
-            // 顯示載入指示器
             showLoadingIndicator("正在提取文字內容...");
 
-            // 在背景執行緒執行文字提取
             Thread extractThread = new Thread(() -> {
                 try {
                     if (isPdfMode) {
-                        // 從PDF提取文字
                         File pdfFile = new File(currentFilePath);
                         currentTextPages = textExtractor.extractTextFromPdf(pdfFile);
                     } else {
-                        // 從圖片提取文字
                         currentTextPages = textExtractor.extractTextFromImages(currentImages);
                     }
 
-                    // 在UI執行緒更新介面
                     Platform.runLater(() -> {
                         hideLoadingIndicator();
 
                         if (currentTextPages != null && !currentTextPages.isEmpty()) {
-                            // 切換到文字渲染器
                             centerPane.getChildren().clear();
                             centerPane.getChildren().addAll(
-                                    textRenderer.getScrollPane(),
+                                    textRenderer.getMainContainer(),
                                     readingProgressBar,
                                     readingTimeLabel
                             );
 
-                            // 設定文字頁面
                             textRenderer.setPages(currentTextPages);
                             textRenderer.setThemeColors(settingsPanel.getCurrentTheme());
 
@@ -369,6 +371,7 @@ public class Main extends Application {
                         } else {
                             AlertHelper.showError("文字提取失敗", "無法從檔案中提取文字內容");
                             isTextMode = false;
+                            textModeBtn.setText("📖 文字模式");
                         }
 
                         updateReadingProgress();
@@ -379,6 +382,7 @@ public class Main extends Application {
                         hideLoadingIndicator();
                         AlertHelper.showError("文字提取錯誤", e.getMessage());
                         isTextMode = false;
+                        textModeBtn.setText("📖 文字模式");
                     });
                 }
             });
@@ -394,7 +398,6 @@ public class Main extends Application {
     }
 
     private void switchToImageMode() {
-        // 切換回圖片檢視器
         centerPane.getChildren().clear();
         centerPane.getChildren().addAll(
                 imageViewer.getScrollPane(),
@@ -405,16 +408,15 @@ public class Main extends Application {
     }
 
     private void updateControlsForMode() {
-        // 更新頁面標籤
-        Label pageLabel = (Label) bottomControls.getChildren().get(bottomControls.getChildren().size() - 1);
         if (isTextMode && currentTextPages != null) {
             pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + currentTextPages.size());
         } else if (!isTextMode && imageViewer.hasImages()) {
-            pageLabel.setText("Page: " + (imageViewer.getCurrentIndex() + 1) + " / " + imageViewer.getTotalPages());
+            pageLabel.setText("頁面: " + (imageViewer.getCurrentIndex() + 1) + " / " + imageViewer.getTotalPages());
+        } else {
+            pageLabel.setText("頁面: 0 / 0");
         }
     }
 
-    // 新增：搜尋對話框
     private void showSearchDialog() {
         if (!isTextMode || currentTextPages == null || currentTextPages.isEmpty()) {
             AlertHelper.showError("提示", "請先切換到文字模式");
@@ -434,18 +436,17 @@ public class Main extends Application {
         });
     }
 
-    // 新增：調整字體大小
     private void adjustFontSize(double delta) {
         if (!isTextMode) {
             return;
         }
 
-        // 這裡需要實作字體大小調整邏輯
-        // 可以在TextRenderer中添加setFontSize方法
+        double currentSize = textRenderer.getFontSize();
+        double newSize = currentSize + delta;
+        textRenderer.setFontSize(newSize);
         showNotification("字體調整", delta > 0 ? "字體已放大" : "字體已縮小");
     }
 
-    // 新增：行距調整對話框
     private void showLineSpacingDialog() {
         if (!isTextMode) {
             return;
@@ -539,14 +540,14 @@ public class Main extends Application {
         updateReadingProgress();
     }
 
-    // 新增：載入指示器
+    // 載入指示器
     private ProgressIndicator loadingIndicator;
     private Label loadingLabel;
     private VBox loadingBox;
 
     private void showLoadingIndicator(String message) {
         if (loadingBox != null) {
-            return; // 已經在顯示
+            return;
         }
 
         loadingIndicator = new ProgressIndicator();
@@ -579,34 +580,24 @@ public class Main extends Application {
         imageViewer.getImageView().setOnMouseClicked(this::handleImageClick);
 
         // 滑鼠滾輪縮放/翻頁
-        if (isTextMode) {
-            textRenderer.getScrollPane().setOnScroll(e -> {
-                if (e.getDeltaY() < 0) {
-                    goToNextPage();
-                } else if (e.getDeltaY() > 0) {
-                    goToPreviousPage();
-                }
-            });
-        } else {
-            imageViewer.getScrollPane().setOnScroll(e -> {
-                if (e.isControlDown()) {
-                    if (e.getDeltaY() > 0) {
-                        imageViewer.zoomIn();
-                    } else {
-                        imageViewer.zoomOut();
-                    }
-                    e.consume();
+        imageViewer.getScrollPane().setOnScroll(e -> {
+            if (e.isControlDown()) {
+                if (e.getDeltaY() > 0) {
+                    imageViewer.zoomIn();
                 } else {
-                    if (e.getDeltaY() < 0) {
-                        imageViewer.nextPage();
-                        updateReadingProgress();
-                    } else if (e.getDeltaY() > 0) {
-                        imageViewer.prevPage();
-                        updateReadingProgress();
-                    }
+                    imageViewer.zoomOut();
                 }
-            });
-        }
+                e.consume();
+            } else {
+                if (e.getDeltaY() < 0) {
+                    imageViewer.nextPage();
+                    updateReadingProgress();
+                } else if (e.getDeltaY() > 0) {
+                    imageViewer.prevPage();
+                    updateReadingProgress();
+                }
+            }
+        });
 
         // 雙擊全螢幕
         imageViewer.getImageView().setOnMouseClicked(e -> {
@@ -617,12 +608,11 @@ public class Main extends Application {
     }
 
     private void handleImageClick(MouseEvent event) {
-        if (isTextMode) return; // 文字模式不處理圖片點擊
+        if (isTextMode) return;
 
         double x = event.getX();
         double imageWidth = imageViewer.getImageView().getBoundsInLocal().getWidth();
 
-        // 點擊右側翻下頁，左側翻上頁
         if (x > imageWidth * 0.7) {
             imageViewer.nextPage();
             updateReadingProgress();
@@ -630,7 +620,6 @@ public class Main extends Application {
             imageViewer.prevPage();
             updateReadingProgress();
         } else {
-            // 中間區域切換控制列顯示
             toggleControlsVisibility();
         }
     }
@@ -735,7 +724,6 @@ public class Main extends Application {
         root.requestFocus();
     }
 
-    // 原有方法保持不變，但需要修改以支援文字模式
     private void openImageFolder() {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("選擇圖片資料夾");
@@ -754,6 +742,10 @@ public class Main extends Application {
                 primaryStage.setTitle("E_Reader - " + folder.getName());
                 updateReadingProgress();
                 updateControlsForMode();
+
+                // 重置文字模式按鈕
+                textModeBtn.setText("📖 文字模式");
+                textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
             } else {
                 AlertHelper.showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
             }
@@ -780,6 +772,10 @@ public class Main extends Application {
                     primaryStage.setTitle("E_Reader - " + pdfFile.getName());
                     updateReadingProgress();
                     updateControlsForMode();
+
+                    // 重置文字模式按鈕
+                    textModeBtn.setText("📖 文字模式");
+                    textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
                 }
             } catch (Exception ex) {
                 AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
@@ -787,7 +783,6 @@ public class Main extends Application {
         }
     }
 
-    // 修改書籤對話框以支援文字模式
     private void showBookmarkDialog() {
         if (currentFilePath.isEmpty()) {
             AlertHelper.showError("提示", "請先開啟檔案");
@@ -804,7 +799,6 @@ public class Main extends Application {
         bookmarkManager.showBookmarkDialog(primaryStage, currentFilePath,
                 currentPageIndex,
                 bookmark -> {
-                    // 跳轉到書籤
                     goToPage(bookmark.getPageNumber());
                 });
     }
@@ -812,8 +806,12 @@ public class Main extends Application {
     private void toggleAutoScroll() {
         isAutoScrolling = !isAutoScrolling;
         if (isAutoScrolling) {
+            autoScrollBtn.setText("⏸️ 停止翻頁");
+            autoScrollBtn.setStyle(autoScrollBtn.getStyle() + "; -fx-background-color: #dc3545;");
             startAutoScroll();
         } else {
+            autoScrollBtn.setText("⏯️ 自動翻頁");
+            autoScrollBtn.setStyle(autoScrollBtn.getStyle().replace("; -fx-background-color: #dc3545", ""));
             stopAutoScroll();
         }
     }
@@ -869,7 +867,6 @@ public class Main extends Application {
     }
 
     private void toggleFocusMode() {
-        // 專注模式：隱藏所有控制元件，只顯示內容
         boolean focusMode = !controlsContainer.isVisible();
         controlsContainer.setVisible(!focusMode);
         controlsContainer.setManaged(!focusMode);
@@ -919,11 +916,9 @@ public class Main extends Application {
         });
 
         dialog.showAndWait().ifPresent(speed -> {
-            // 設定自動翻頁速度
             if (isAutoScrolling) {
                 stopAutoScroll();
             }
-            // 使用新的速度重新開始
             startAutoScrollWithSpeed(speed * 1000);
         });
     }
@@ -955,6 +950,8 @@ public class Main extends Application {
         }, milliseconds, milliseconds);
 
         isAutoScrolling = true;
+        autoScrollBtn.setText("⏸️ 停止翻頁");
+        autoScrollBtn.setStyle(autoScrollBtn.getStyle() + "; -fx-background-color: #dc3545;");
     }
 
     // 計時器相關
@@ -1028,6 +1025,23 @@ public class Main extends Application {
     private void saveLastReadingPosition() {
         // 儲存最後閱讀位置的邏輯
         // 可以使用 Properties 或 JSON 格式儲存
+        try {
+            java.util.Properties props = new java.util.Properties();
+            props.setProperty("lastFile", currentFilePath);
+            if (isTextMode) {
+                props.setProperty("lastPage", String.valueOf(textRenderer.getCurrentPageIndex()));
+                props.setProperty("mode", "text");
+            } else {
+                props.setProperty("lastPage", String.valueOf(imageViewer.getCurrentIndex()));
+                props.setProperty("mode", "image");
+            }
+
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream("last_reading.properties")) {
+                props.store(out, "Last Reading Position");
+            }
+        } catch (Exception e) {
+            System.err.println("無法儲存閱讀位置: " + e.getMessage());
+        }
     }
 
     private void stopAllTimers() {
@@ -1068,10 +1082,8 @@ public class Main extends Application {
     }
 
     private void applySettings() {
-        // 從設定面板套用設定到閱讀器
         SettingsPanel.ThemeMode currentTheme = settingsPanel.getCurrentTheme();
 
-        // 套用主題
         String backgroundColor = currentTheme.getBackgroundColor();
         String textColor = currentTheme.getTextColor();
 

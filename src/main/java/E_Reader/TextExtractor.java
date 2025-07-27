@@ -13,11 +13,17 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class TextExtractor {
 
     private Tesseract tesseract;
     private boolean ocrInitialized = false;
+
+    private static final Pattern PARAGRAPH_SEPARATOR = Pattern.compile("\n\\s*\n+");
+    private static final Pattern LINE_BREAK = Pattern.compile("\n");
+    private static final Pattern SENTENCE_END = Pattern.compile("[。！？.!?]\\s*");
+    private static final Pattern CHAPTER_HEADER = Pattern.compile("^(第[一二三四五六七八九十0-9]+[章節回部]|Chapter\\s+\\d+|CHAPTER\\s+\\d+)");
 
     public TextExtractor() {
         initializeOCR();
@@ -26,22 +32,24 @@ public class TextExtractor {
     private void initializeOCR() {
         try {
             tesseract = new Tesseract();
-            // 設定 Tesseract 數據路徑（需要下載語言包）
-            tesseract.setDatapath("tessdata"); // 語言包路徑
-            tesseract.setLanguage("chi_tra+eng"); // 繁體中文 + 英文
-            tesseract.setPageSegMode(1); // 自動頁面分割
-            tesseract.setOcrEngineMode(1); // 使用 LSTM OCR 引擎
+            tesseract.setDatapath("tessdata");
+            tesseract.setLanguage("chi_tra+eng");
+            tesseract.setPageSegMode(1);
+            tesseract.setOcrEngineMode(1);
+            tesseract.setVariable("tessedit_char_whitelist",
+                    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
+                            "一二三四五六七八九十百千萬億" +
+                            "的是了不在有個人這上我大來以他時要說年生對中可你國也就到下所" +
+                            "會小而能用於自己出道走子它種只多如面方前回什公司問題工作生活" +
+                            "好了在是的有不了就是這個一是不的有了就這個一是不的有了");
+
             ocrInitialized = true;
         } catch (Exception e) {
             System.err.println("OCR 初始化失敗: " + e.getMessage());
-            System.err.println("請確保已安裝 Tesseract 並下載中文語言包");
             ocrInitialized = false;
         }
     }
 
-    /**
-     * 從PDF提取文字（原生文字）
-     */
     public List<PageText> extractTextFromPdf(File pdfFile) throws IOException {
         List<PageText> pages = new ArrayList<>();
 
@@ -50,21 +58,19 @@ public class TextExtractor {
             PDFRenderer renderer = new PDFRenderer(document);
 
             for (int i = 0; i < document.getNumberOfPages(); i++) {
-                // 嘗試提取原生文字
                 stripper.setStartPage(i + 1);
                 stripper.setEndPage(i + 1);
                 String extractedText = stripper.getText(document).trim();
 
                 PageText pageText = new PageText();
                 pageText.setPageNumber(i);
-                pageText.setOriginalText(extractedText);
+                pageText.setOriginalText(cleanExtractedText(extractedText));
 
-                // 如果原生文字提取失敗或文字很少，使用OCR
                 if (extractedText.length() < 50 && ocrInitialized) {
                     try {
                         BufferedImage pageImage = renderer.renderImageWithDPI(i, 300);
                         String ocrText = tesseract.doOCR(pageImage);
-                        pageText.setOcrText(ocrText);
+                        pageText.setOcrText(cleanOCRText(ocrText));
                         pageText.setTextSource(TextSource.OCR);
                     } catch (TesseractException e) {
                         System.err.println("OCR 處理第 " + (i + 1) + " 頁失敗: " + e.getMessage());
@@ -81,9 +87,6 @@ public class TextExtractor {
         return pages;
     }
 
-    /**
-     * 從圖片提取文字（OCR）
-     */
     public List<PageText> extractTextFromImages(List<Image> images) {
         List<PageText> pages = new ArrayList<>();
 
@@ -98,13 +101,10 @@ public class TextExtractor {
             pageText.setTextSource(TextSource.OCR);
 
             try {
-                // 將JavaFX Image轉換為BufferedImage
                 BufferedImage bufferedImage = SwingFXUtils.fromFXImage(images.get(i), null);
-
-                // 使用OCR提取文字
-                String ocrText = tesseract.doOCR(bufferedImage);
-                pageText.setOcrText(ocrText);
-
+                BufferedImage processedImage = preprocessImageForOCR(bufferedImage);
+                String ocrText = tesseract.doOCR(processedImage);
+                pageText.setOcrText(cleanOCRText(ocrText));
             } catch (TesseractException e) {
                 System.err.println("OCR 處理第 " + (i + 1) + " 頁圖片失敗: " + e.getMessage());
                 pageText.setOcrText("");
@@ -116,17 +116,46 @@ public class TextExtractor {
         return pages;
     }
 
-    /**
-     * 從單張圖片提取文字
-     */
+    private BufferedImage preprocessImageForOCR(BufferedImage originalImage) {
+        return originalImage;
+    }
+
+    private String cleanOCRText(String ocrText) {
+        if (ocrText == null || ocrText.trim().isEmpty()) return "";
+
+        String cleaned = ocrText;
+        cleaned = cleaned.replaceAll("[|]", "");
+        cleaned = cleaned.replaceAll("\\s{3,}", "\n\n");
+        cleaned = cleaned.replaceAll("(?m)^\\s+", "");
+        cleaned = cleaned.replaceAll("(?m)\\s+$", "");
+        cleaned = cleaned.replaceAll("\n{3,}", "\n\n");
+        cleaned = cleaned.replaceAll("0", "O");
+        cleaned = cleaned.replaceAll("丨", "1");
+
+        return cleaned.trim();
+    }
+
+    private String cleanExtractedText(String text) {
+        if (text == null || text.trim().isEmpty()) return "";
+
+        String cleaned = text;
+        cleaned = cleaned.replaceAll("\r\n", "\n");
+        cleaned = cleaned.replaceAll("\r", "\n");
+        cleaned = cleaned.replaceAll("[ \t]+", " ");
+        cleaned = cleaned.replaceAll("(?m)^\\s+", "");
+        cleaned = cleaned.replaceAll("(?m)\\s+$", "");
+
+        return cleaned.trim();
+    }
+
     public String extractTextFromImage(Image image) {
-        if (!ocrInitialized) {
-            return "";
-        }
+        if (!ocrInitialized) return "";
 
         try {
             BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
-            return tesseract.doOCR(bufferedImage);
+            BufferedImage processedImage = preprocessImageForOCR(bufferedImage);
+            String ocrText = tesseract.doOCR(processedImage);
+            return cleanOCRText(ocrText);
         } catch (TesseractException e) {
             System.err.println("OCR 處理圖片失敗: " + e.getMessage());
             return "";
@@ -137,17 +166,13 @@ public class TextExtractor {
         return ocrInitialized;
     }
 
-    /**
-     * 頁面文字數據類
-     */
     public static class PageText {
         private int pageNumber;
-        private String originalText = ""; // PDF原生文字
-        private String ocrText = "";      // OCR提取的文字
+        private String originalText = "";
+        private String ocrText = "";
         private TextSource textSource;
         private List<TextBlock> textBlocks = new ArrayList<>();
 
-        // Getters and Setters
         public int getPageNumber() { return pageNumber; }
         public void setPageNumber(int pageNumber) { this.pageNumber = pageNumber; }
 
@@ -163,9 +188,6 @@ public class TextExtractor {
         public List<TextBlock> getTextBlocks() { return textBlocks; }
         public void setTextBlocks(List<TextBlock> textBlocks) { this.textBlocks = textBlocks; }
 
-        /**
-         * 獲取最佳文字內容
-         */
         public String getBestText() {
             switch (textSource) {
                 case NATIVE:
@@ -173,35 +195,129 @@ public class TextExtractor {
                 case OCR:
                     return ocrText.isEmpty() ? originalText : ocrText;
                 default:
-                    return originalText.isEmpty() ? ocrText : originalText;
+                    return (ocrText != null && !ocrText.isEmpty()) ? ocrText : originalText;
             }
         }
 
-        /**
-         * 格式化文字為段落
-         */
         public List<String> getFormattedParagraphs() {
             String text = getBestText();
-            if (text.isEmpty()) {
-                return new ArrayList<>();
+            if (text.isEmpty()) return new ArrayList<>();
+            return formatTextIntoParagraphs(text);
+        }
+
+        private List<String> formatTextIntoParagraphs(String text) {
+            List<String> paragraphs = new ArrayList<>();
+            String[] majorSections = PARAGRAPH_SEPARATOR.split(text);
+
+            for (String section : majorSections) {
+                section = section.trim();
+                if (section.isEmpty()) continue;
+                if (isChapterHeader(section)) {
+                    paragraphs.add(section);
+                    continue;
+                }
+
+                List<String> subParagraphs = processSectionIntoParagraphs(section);
+                paragraphs.addAll(subParagraphs);
             }
 
-            List<String> paragraphs = new ArrayList<>();
-            String[] lines = text.split("\n");
+            if (paragraphs.isEmpty()) {
+                paragraphs.addAll(fallbackParagraphSplit(text));
+            }
+
+            return cleanParagraphs(paragraphs);
+        }
+
+        private boolean isChapterHeader(String text) {
+            if (text.length() > 100) return false;
+            return CHAPTER_HEADER.matcher(text.trim()).find();
+        }
+
+        private List<String> processSectionIntoParagraphs(String section) {
+            List<String> result = new ArrayList<>();
+            String[] lines = LINE_BREAK.split(section);
             StringBuilder currentParagraph = new StringBuilder();
 
             for (String line : lines) {
                 line = line.trim();
                 if (line.isEmpty()) {
                     if (currentParagraph.length() > 0) {
-                        paragraphs.add(currentParagraph.toString().trim());
+                        result.add(currentParagraph.toString().trim());
                         currentParagraph = new StringBuilder();
                     }
-                } else {
+                    continue;
+                }
+
+                if (shouldStartNewParagraph(line, currentParagraph.toString())) {
                     if (currentParagraph.length() > 0) {
-                        currentParagraph.append(" ");
+                        result.add(currentParagraph.toString().trim());
+                        currentParagraph = new StringBuilder();
                     }
-                    currentParagraph.append(line);
+                }
+
+                if (currentParagraph.length() > 0 && needsSpaceBetweenLines(currentParagraph.toString(), line)) {
+                    currentParagraph.append(" ");
+                }
+
+                currentParagraph.append(line);
+            }
+
+            if (currentParagraph.length() > 0) {
+                result.add(currentParagraph.toString().trim());
+            }
+
+            return result;
+        }
+
+        private boolean shouldStartNewParagraph(String line, String currentParagraph) {
+            if (currentParagraph.isEmpty()) return false;
+            if (isChapterHeader(line)) return true;
+            if (line.startsWith("「") || line.startsWith("『") || line.startsWith("“") || line.startsWith("\"")) return true;
+
+            if (currentParagraph.endsWith("。") || currentParagraph.endsWith("！") || currentParagraph.endsWith("？") ||
+                    currentParagraph.endsWith(".") || currentParagraph.endsWith("!") || currentParagraph.endsWith("?")) {
+                if (!line.matches("^[而且但是因此所以然而不過].*")) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private boolean needsSpaceBetweenLines(String currentText, String newLine) {
+            if (currentText.isEmpty() || newLine.isEmpty()) return false;
+            char lastChar = currentText.charAt(currentText.length() - 1);
+            char firstChar = newLine.charAt(0);
+
+            if ("，。！？；：、".indexOf(lastChar) != -1) return false;
+            if ("，。！？；：、」』“".indexOf(firstChar) != -1) return false;
+            if (isChinese(lastChar) && isChinese(firstChar)) return false;
+
+            return Character.isLetterOrDigit(lastChar) && Character.isLetterOrDigit(firstChar);
+        }
+
+        private boolean isChinese(char c) {
+            return c >= 0x4e00 && c <= 0x9fff;
+        }
+
+        private List<String> fallbackParagraphSplit(String text) {
+            List<String> paragraphs = new ArrayList<>();
+            String[] sentences = SENTENCE_END.split(text);
+            StringBuilder currentParagraph = new StringBuilder();
+
+            for (String sentence : sentences) {
+                sentence = sentence.trim();
+                if (sentence.isEmpty()) continue;
+
+                if (currentParagraph.length() > 0) {
+                    currentParagraph.append("。");
+                }
+
+                currentParagraph.append(sentence);
+
+                if (currentParagraph.length() > 100 && currentParagraph.length() < 300) {
+                    paragraphs.add(currentParagraph.toString().trim());
+                    currentParagraph = new StringBuilder();
                 }
             }
 
@@ -211,25 +327,45 @@ public class TextExtractor {
 
             return paragraphs;
         }
+
+        private List<String> cleanParagraphs(List<String> paragraphs) {
+            List<String> cleaned = new ArrayList<>();
+
+            for (String paragraph : paragraphs) {
+                paragraph = paragraph.trim();
+                if (paragraph.isEmpty()) continue;
+                if (paragraph.length() < 5) continue;
+
+                if (paragraph.length() < 30 && !cleaned.isEmpty() && !isChapterHeader(paragraph)) {
+                    String last = cleaned.get(cleaned.size() - 1);
+                    cleaned.set(cleaned.size() - 1, last + " " + paragraph);
+                } else {
+                    cleaned.add(paragraph);
+                }
+            }
+
+            return cleaned;
+        }
     }
 
-    /**
-     * 文字區塊類（用於版面分析）
-     */
     public static class TextBlock {
         private double x, y, width, height;
         private String text;
         private double confidence;
 
         public TextBlock(double x, double y, double width, double height, String text) {
+            this(x, y, width, height, text, 0.0);
+        }
+
+        public TextBlock(double x, double y, double width, double height, String text, double confidence) {
             this.x = x;
             this.y = y;
             this.width = width;
             this.height = height;
             this.text = text;
+            this.confidence = confidence;
         }
 
-        // Getters and Setters
         public double getX() { return x; }
         public void setX(double x) { this.x = x; }
 
@@ -249,9 +385,6 @@ public class TextExtractor {
         public void setConfidence(double confidence) { this.confidence = confidence; }
     }
 
-    /**
-     * 文字來源枚舉
-     */
     public enum TextSource {
         NATIVE("原生文字"),
         OCR("OCR識別"),
