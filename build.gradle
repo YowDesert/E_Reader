@@ -1,0 +1,122 @@
+plugins {
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.13'
+}
+
+group 'com.ereader'
+version '3.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+javafx {
+    version = '17.0.2'
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.swing']
+}
+
+dependencies {
+    // JavaFX
+    implementation 'org.openjfx:javafx-controls:17.0.2'
+    implementation 'org.openjfx:javafx-fxml:17.0.2'
+    implementation 'org.openjfx:javafx-swing:17.0.2'
+
+    // PDF 處理
+    implementation 'org.apache.pdfbox:pdfbox:2.0.29'
+    implementation 'org.apache.pdfbox:pdfbox-tools:2.0.29'
+
+    // JSON 處理
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+
+    // OCR 支援 (可選)
+    implementation 'net.sourceforge.tess4j:tess4j:5.8.0'
+
+    // 日誌
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.8'
+
+    // 測試
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    mainModule = 'E_Reader'
+    mainClass = 'E_Reader.Main'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// 創建可執行的 JAR
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'E_Reader.Main',
+                'Implementation-Title': 'E-Reader',
+                'Implementation-Version': version
+        )
+    }
+}
+
+// 包含所有依賴的 fat JAR
+task fatJar(type: Jar) {
+    archiveClassifier = 'all'
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+
+    manifest {
+        attributes(
+                'Main-Class': 'E_Reader.Main',
+                'Implementation-Title': 'E-Reader',
+                'Implementation-Version': version
+        )
+    }
+}
+
+// Windows 可執行文件配置
+task createExe {
+    doLast {
+        println "請使用 jpackage 或其他工具創建可執行文件"
+    }
+}
+
+// 資源處理
+processResources {
+    from('src/main/resources') {
+        include '**/*'
+    }
+}
+
+// 編譯配置
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['--enable-preview']
+}
+
+// 運行配置
+run {
+    jvmArgs = [
+            '--module-path', classpath.asPath,
+            '--add-modules', 'javafx.controls,javafx.fxml,javafx.swing'
+    ]
+}
+
+// 清理任務
+clean {
+    delete 'tessdata'
+    delete 'bookmarks.json'
+    delete 'e_reader_settings.properties'
+    delete 'last_reading.properties'
+}
