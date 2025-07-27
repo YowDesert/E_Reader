@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
-    <artifactId>E_Reader</artifactId>
+    <artifactId>E-Reader</artifactId>
     <version>2.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -207,7 +207,7 @@
                 <artifactId>jpackage-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <name>E-Reader</name>
+                    <n>E-Reader</n>
                     <appVersion>${project.version}</appVersion>
                     <vendor>E-Reader Team</vendor>
                     <destination>${project.build.directory}/installer</destination>
