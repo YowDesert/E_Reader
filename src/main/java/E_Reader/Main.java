@@ -63,6 +63,8 @@ public class Main extends Application {
     private TextField pageField;
     private Button textModeBtn;
     private Button autoScrollBtn;
+    private Button nightModeBtn;
+    private Button eyeCareBtn;
 
     @Override
     public void start(Stage primaryStage) {
@@ -151,14 +153,14 @@ public class Main extends Application {
         Button fullscreenBtn = new Button("🔲 全螢幕");
         Button exitBtn = new Button("❌ 離開");
 
-        // 新增功能按鈕
+        // 新增功能按鈕 - 保存按钮引用
         autoScrollBtn = new Button("⏯️ 自動翻頁");
-        Button nightModeBtn = new Button("🌙 夜間模式");
-        Button eyeCareBtn = new Button("👁️ 護眼模式");
+        nightModeBtn = new Button("🌙 夜間模式");  // 保存引用
+        eyeCareBtn = new Button("👁️ 護眼模式");    // 保存引用
         textModeBtn = new Button("📖 文字模式");
         Button searchBtn = new Button("🔍 搜尋文字");
 
-        // 設定按鈕樣式
+        // 设定按钮样式
         String buttonStyle = "-fx-background-color: #404040; -fx-text-fill: white; " +
                 "-fx-border-radius: 5; -fx-background-radius: 5; " +
                 "-fx-padding: 8 12 8 12; -fx-font-size: 12px;";
@@ -236,6 +238,24 @@ public class Main extends Application {
                 zoomInBtn, zoomOutBtn, fitWidthBtn, fitHeightBtn,
                 rotateBtn, focusModeBtn, speedReadBtn, pageField,
                 fontSizeIncBtn, fontSizeDecBtn, lineSpacingBtn);
+    }
+
+    private void toggleNightMode() {
+        boolean wasNightMode = settingsPanel.getThemeMode() == SettingsPanel.ThemeMode.BLACK;
+
+        if (wasNightMode) {
+            // 关闭夜间模式，恢复到深色模式
+            settingsPanel.setThemeMode(SettingsPanel.ThemeMode.DARK);
+            nightModeBtn.setStyle(nightModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
+            showNotification("夜間模式", "夜間模式已關閉");
+        } else {
+            // 开启夜间模式
+            settingsPanel.setThemeMode(SettingsPanel.ThemeMode.BLACK);
+            nightModeBtn.setStyle(nightModeBtn.getStyle() + "; -fx-background-color: #28a745;");
+            showNotification("夜間模式", "夜間模式已啟用");
+        }
+
+        applySettings();
     }
 
     private void setupButtonHandlers(Button openFolderBtn, Button openPdfBtn, Button bookmarkBtn,
@@ -851,19 +871,28 @@ public class Main extends Application {
         }
     }
 
-    private void toggleNightMode() {
-        settingsPanel.setThemeMode(settingsPanel.getThemeMode() == SettingsPanel.ThemeMode.BLACK ?
-                SettingsPanel.ThemeMode.DARK : SettingsPanel.ThemeMode.BLACK);
-        applySettings();
-    }
+//    private void toggleNightMode() {
+//        settingsPanel.setThemeMode(settingsPanel.getThemeMode() == SettingsPanel.ThemeMode.BLACK ?
+//                SettingsPanel.ThemeMode.DARK : SettingsPanel.ThemeMode.BLACK);
+//        applySettings();
+//    }
 
     private void toggleEyeCareMode() {
-        settingsPanel.setEyeCareMode(!settingsPanel.isEyeCareMode());
-        applySettings();
+        boolean wasEyeCareMode = settingsPanel.isEyeCareMode();
 
-        if (settingsPanel.isEyeCareMode()) {
+        settingsPanel.setEyeCareMode(!wasEyeCareMode);
+
+        if (!wasEyeCareMode) {
+            // 启用护眼模式
+            eyeCareBtn.setStyle(eyeCareBtn.getStyle() + "; -fx-background-color: #28a745;");
             showNotification("護眼模式已啟用", "建議每30分鐘休息5-10分鐘");
+        } else {
+            // 关闭护眼模式
+            eyeCareBtn.setStyle(eyeCareBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
+            showNotification("護眼模式", "護眼模式已關閉");
         }
+
+        applySettings();
     }
 
     private void toggleFocusMode() {
@@ -1087,23 +1116,45 @@ public class Main extends Application {
         String backgroundColor = currentTheme.getBackgroundColor();
         String textColor = currentTheme.getTextColor();
 
-        // 更新UI元素的顏色
+        // 更新UI元素的颜色
         imageViewer.getScrollPane().setStyle("-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";");
 
-        // 如果在文字模式，也更新文字渲染器的主題
+        // 如果在文字模式，也更新文字渲染器的主题
         if (isTextMode) {
             textRenderer.setThemeColors(currentTheme);
         }
 
-        // 套用其他設定
+        // 套用其他设定
         imageViewer.setFitMode(settingsPanel.getFitMode());
 
-        // 更新護眼提醒
+        // 更新按钮状态
+        updateButtonStates();
+
+        // 更新护眼提醒
         if (settingsPanel.isEyeCareMode() && eyeCareReminderTimer == null) {
             startEyeCareReminder();
         } else if (!settingsPanel.isEyeCareMode() && eyeCareReminderTimer != null) {
             eyeCareReminderTimer.cancel();
             eyeCareReminderTimer = null;
+        }
+    }
+    private void updateButtonStates() {
+        // 更新夜间模式按钮状态
+        if (settingsPanel.getThemeMode() == SettingsPanel.ThemeMode.BLACK) {
+            if (!nightModeBtn.getStyle().contains("-fx-background-color: #28a745")) {
+                nightModeBtn.setStyle(nightModeBtn.getStyle() + "; -fx-background-color: #28a745;");
+            }
+        } else {
+            nightModeBtn.setStyle(nightModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
+        }
+
+        // 更新护眼模式按钮状态
+        if (settingsPanel.isEyeCareMode()) {
+            if (!eyeCareBtn.getStyle().contains("-fx-background-color: #28a745")) {
+                eyeCareBtn.setStyle(eyeCareBtn.getStyle() + "; -fx-background-color: #28a745;");
+            }
+        } else {
+            eyeCareBtn.setStyle(eyeCareBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
         }
     }
 

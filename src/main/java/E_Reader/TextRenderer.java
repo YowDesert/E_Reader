@@ -323,7 +323,6 @@ public class TextRenderer {
     private VBox createPageView(TextPage page) {
         VBox pageView = new VBox();
         pageView.setAlignment(Pos.TOP_CENTER);
-        pageView.setSpacing(paragraphSpacing);
         pageView.setPadding(new Insets(pageMarginVertical, pageMarginHorizontal, pageMarginVertical, pageMarginHorizontal));
         pageView.setMaxWidth(calculateOptimalPageWidth());
 
@@ -342,12 +341,36 @@ public class TextRenderer {
             return pageView;
         }
 
-        for (String paragraph : page.paragraphs) {
-            TextFlow paragraphFlow = createParagraphTextFlow(paragraph);
-            pageView.getChildren().add(paragraphFlow);
+        // 修改：为每一行创建单独的文本元素
+        for (String line : page.paragraphs) {
+            if (line.isEmpty()) {
+                // 空行作为段落分隔
+                Label spacer = new Label();
+                spacer.setPrefHeight(paragraphSpacing * 0.5);
+                pageView.getChildren().add(spacer);
+            } else if (isChapterHeader(line)) {
+                // 章节标题
+                Label chapterLabel = createChapterLabel(line);
+                pageView.getChildren().add(chapterLabel);
+            } else {
+                // 普通文本行
+                TextFlow lineFlow = createLineTextFlow(line);
+                pageView.getChildren().add(lineFlow);
+            }
         }
 
         return pageView;
+    }
+
+    private Label createChapterLabel(String chapterText) {
+        Label chapterLabel = new Label(chapterText);
+        chapterLabel.setTextFill(headerColor);
+        chapterLabel.setFont(Font.font(headerFont.getFamily(), FontWeight.BOLD, baseFontSize * 1.3));
+        chapterLabel.setAlignment(Pos.CENTER);
+        chapterLabel.setPadding(new Insets(paragraphSpacing, 0, paragraphSpacing, 0));
+        chapterLabel.setStyle("-fx-text-alignment: center;");
+        chapterLabel.setWrapText(true);
+        return chapterLabel;
     }
 
     private double calculateOptimalPageWidth() {
@@ -392,22 +415,46 @@ public class TextRenderer {
         return header;
     }
 
-    private TextFlow createParagraphTextFlow(String paragraph) {
+    private TextFlow createLineTextFlow(String line) {
         TextFlow textFlow = new TextFlow();
         textFlow.setLineSpacing(lineSpacing);
-        textFlow.setPadding(new Insets(0, 0, paragraphSpacing * 0.8, 0));
+        textFlow.setPadding(new Insets(lineSpacing * 2, 0, 0, 0)); // 行间距
         textFlow.setMaxWidth(Double.MAX_VALUE);
 
         if (currentSearchTerm.isEmpty()) {
-            Text text = new Text(paragraph);
+            Text text = new Text(line);
             text.setFill(textColor);
             text.setFont(textFont);
             textFlow.getChildren().add(text);
         } else {
-            addHighlightedText(textFlow, paragraph, currentSearchTerm);
+            addHighlightedText(textFlow, line, currentSearchTerm);
         }
 
         return textFlow;
+    }
+
+    private boolean isChapterHeader(String text) {
+        if (text == null || text.trim().isEmpty()) return false;
+        if (text.length() > 100) return false;
+
+        String trimmedText = text.trim();
+
+        // 检测中文章节标题
+        if (trimmedText.matches("^第[一二三四五六七八九十0-9]+[章節回部].*")) {
+            return true;
+        }
+
+        // 检测英文章节标题
+        if (trimmedText.matches("^(Chapter|CHAPTER)\\s+\\d+.*")) {
+            return true;
+        }
+
+        // 检测其他可能的标题格式
+        if (trimmedText.matches("^[0-9]+[、．].*") && trimmedText.length() < 50) {
+            return true;
+        }
+
+        return false;
     }
 
     private void showNoContentMessage() {
