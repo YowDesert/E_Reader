@@ -199,10 +199,77 @@ public class TextExtractor {
             }
         }
 
+        // 在TextExtractor.java的PageText类中修改getFormattedParagraphs方法
+
         public List<String> getFormattedParagraphs() {
             String text = getBestText();
             if (text.isEmpty()) return new ArrayList<>();
-            return formatTextIntoParagraphs(text);
+            // 修改：保持原有换行格式
+            return formatTextWithOriginalLineBreaks(text);
+        }
+
+        private List<String> formatTextWithOriginalLineBreaks(String text) {
+            List<String> lines = new ArrayList<>();
+
+            // 将文本按行分割，保持原有的换行
+            String[] originalLines = text.split("\n");
+
+            for (String line : originalLines) {
+                line = line.trim();
+
+                // 跳过空行，但保留一个空行作为段落分隔
+                if (line.isEmpty()) {
+                    if (!lines.isEmpty() && !lines.get(lines.size() - 1).isEmpty()) {
+                        lines.add(""); // 添加空行作为段落分隔
+                    }
+                    continue;
+                }
+
+                // 检查是否是章节标题
+                if (isChapterHeader(line)) {
+                    // 章节标题前后添加空行分隔
+                    if (!lines.isEmpty() && !lines.get(lines.size() - 1).isEmpty()) {
+                        lines.add("");
+                    }
+                    lines.add(line);
+                    lines.add("");
+                    continue;
+                }
+
+                // 清理行内容但保持换行结构
+                String cleanedLine = cleanLineContent(line);
+                if (!cleanedLine.isEmpty()) {
+                    lines.add(cleanedLine);
+                }
+            }
+
+            // 移除开头和结尾的空行
+            while (!lines.isEmpty() && lines.get(0).isEmpty()) {
+                lines.remove(0);
+            }
+            while (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) {
+                lines.remove(lines.size() - 1);
+            }
+
+            return lines;
+        }
+
+        // 辅助方法：清理行内容
+        private String cleanLineContent(String line) {
+            if (line == null) return "";
+
+            // 移除行首行尾的空白字符
+            line = line.trim();
+
+            // 清理多余的空格
+            line = line.replaceAll("\\s+", " ");
+
+            // 移除一些OCR可能产生的错误字符
+            line = line.replaceAll("[|]", "");
+            line = line.replaceAll("0", "O"); // 将数字0替换为字母O（如果需要）
+            line = line.replaceAll("丨", "1"); // 将竖线替换为数字1
+
+            return line;
         }
 
         private List<String> formatTextIntoParagraphs(String text) {
