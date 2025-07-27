@@ -117,7 +117,7 @@ java -cp "lib/*:src" --module-path /path/to/javafx/lib --add-modules javafx.cont
 | `Ctrl` + `+` | 放大 |
 | `Ctrl` + `-` | 縮小 |
 | `Ctrl` + `0` | 重設縮放 |
-| `H` | 隱藏/顯示控制列 |
+| `Ctrl` + `H` | 隱藏/顯示控制列 |
 | `Ctrl` + `B` | 書籤管理 |
 | `Ctrl` + `T` | 切換文字模式 |
 | `Ctrl` + `/` | 搜尋文字 |
