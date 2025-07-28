@@ -17,7 +17,6 @@ Error: JavaFX runtime components are missing, and are required to run this appli
 Process finished with exit code 1
 顯示這個要怎麼辦?
 
-
 Ctrl+B - 書籤管理
 Ctrl+N - 夜間模式切換
 Ctrl+E - 護眼模式切換
