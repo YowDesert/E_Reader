@@ -9,13 +9,8 @@
 然後望面可以設定資料夾才不會讓檔案混亂
 並且可以命名以及移動檔案到其他資料夾
 類似GOODNOTE那樣
+現在檔案管理器差拖動功能
 
-問題:
-幫我看一下我資料夾的程式碼
-他啟動主程式會
-Error: JavaFX runtime components are missing, and are required to run this application
-Process finished with exit code 1
-顯示這個要怎麼辦?
 
 Ctrl+B - 書籤管理
 Ctrl+N - 夜間模式切換
