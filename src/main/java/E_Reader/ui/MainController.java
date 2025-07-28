@@ -599,6 +599,9 @@ public class MainController {
     public ImageViewer getImageViewer() { return imageViewer; }
     public TimerManager getTimerManager() { return timerManager; }
     public FileManagerController getFileManagerController() { return fileManagerController; }
+    public ImageLoader getImageLoader() { return imageLoader; }
+    public PdfLoader getPdfLoader() { return pdfLoader; }
+    public TextExtractor getTextExtractor() { return textExtractor; }
 
     // 書籤管理
     public void showBookmarkDialog() {
