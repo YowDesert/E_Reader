@@ -145,14 +145,15 @@ public class SettingsManager {
 
     // 主題相關方法
     public void toggleNightMode() {
-        boolean wasNightMode = (themeMode == ThemeMode.BLACK);
+        // 切換夜間模式標記
+        nightMode = !nightMode;
         
-        if (wasNightMode) {
-            // 關閉夜間模式，恢復到深色模式
-            setThemeMode(ThemeMode.DARK);
-        } else {
-            // 開啟夜間模式
+        if (nightMode) {
+            // 啟用夜間模式時，自動切換到純黑主題
             setThemeMode(ThemeMode.BLACK);
+        } else {
+            // 關閉夜間模式時，恢復到深色模式
+            setThemeMode(ThemeMode.DARK);
         }
         
         saveSettings();
@@ -187,8 +188,13 @@ public class SettingsManager {
 
     // 獲取當前應該使用的主題（考慮夜間模式和護眼模式）
     public ThemeMode getCurrentTheme() {
+        // 優先檢查手動開啟的夜間模式
+        if (nightMode) {
+            return ThemeMode.BLACK; // 手動開啟的夜間模式
+        }
+        // 再檢查自動時間夜間模式（如果啟用了自動模式）
         if (shouldEnableNightMode()) {
-            return ThemeMode.BLACK; // 夜間自動切換到純黑模式
+            return ThemeMode.BLACK; // 自動時間夜間模式
         }
         if (eyeCareMode) {
             return ThemeMode.EYE_CARE; // 護眼模式

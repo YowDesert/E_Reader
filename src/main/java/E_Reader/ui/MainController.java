@@ -627,8 +627,8 @@ public class MainController {
     public void toggleNightMode() {
         settingsManager.toggleNightMode();
 
-        // 更新按鈕狀態
-        if (settingsManager.getCurrentTheme() == SettingsManager.ThemeMode.BLACK) {
+        // 更新按鈕狀態 - 基於 nightMode 標記
+        if (settingsManager.isNightMode()) {
             nightModeBtn.setStyle(nightModeBtn.getStyle() + "; -fx-background-color: #28a745;");
             showNotification("夜間模式", "夜間模式已啟用");
         } else {
@@ -778,8 +778,8 @@ public class MainController {
     }
 
     private void updateButtonStates() {
-        // 更新夜間模式按鈕狀態
-        if (settingsManager.getCurrentTheme() == SettingsManager.ThemeMode.BLACK) {
+        // 更新夜間模式按鈕狀態 - 基於 nightMode 標記而非當前主題
+        if (settingsManager.isNightMode()) {
             if (!nightModeBtn.getStyle().contains("-fx-background-color: #28a745")) {
                 nightModeBtn.setStyle(nightModeBtn.getStyle() + "; -fx-background-color: #28a745;");
             }
