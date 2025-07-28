@@ -145,6 +145,11 @@ public class SettingsManager {
 
     // 主題相關方法
     public void toggleNightMode() {
+        // 如果護眼模式開啟，先關閉護眼模式
+        if (eyeCareMode) {
+            eyeCareMode = false;
+        }
+        
         // 切換夜間模式標記
         nightMode = !nightMode;
         
@@ -160,6 +165,11 @@ public class SettingsManager {
     }
     
     public void toggleEyeCareMode() {
+        // 如果夜間模式開啟，先關閉夜間模式
+        if (nightMode) {
+            nightMode = false;
+        }
+        
         eyeCareMode = !eyeCareMode;
         if (eyeCareMode) {
             // 啟用護眼模式時自動切換到護眼主題

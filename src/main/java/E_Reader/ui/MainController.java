@@ -630,10 +630,8 @@ public class MainController {
         // 更新按鈕狀態 - 基於 nightMode 標記
         if (settingsManager.isNightMode()) {
             nightModeBtn.setStyle(nightModeBtn.getStyle() + "; -fx-background-color: #28a745;");
-            showNotification("夜間模式", "夜間模式已啟用");
         } else {
             nightModeBtn.setStyle(nightModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
-            showNotification("夜間模式", "夜間模式已關閉");
         }
 
         applySettings();
@@ -649,7 +647,6 @@ public class MainController {
             showNotification("護眼模式已啟用", "建議每30分鐘休息5-10分鐘");
         } else {
             eyeCareBtn.setStyle(eyeCareBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
-            showNotification("護眼模式", "護眼模式已關閉");
         }
 
         applySettings();
@@ -794,6 +791,14 @@ public class MainController {
             }
         } else {
             eyeCareBtn.setStyle(eyeCareBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
+        }
+        
+        // 確保互斥性：當一個模式開啟時，另一個模式的按鈕狀態會被關閉
+        if (settingsManager.isNightMode() && eyeCareBtn.getStyle().contains("-fx-background-color: #28a745")) {
+            eyeCareBtn.setStyle(eyeCareBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
+        }
+        if (settingsManager.isEyeCareMode() && nightModeBtn.getStyle().contains("-fx-background-color: #28a745")) {
+            nightModeBtn.setStyle(nightModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
         }
     }
 
