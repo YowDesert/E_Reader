@@ -421,3 +421,51 @@ E_Reader/src/main/java/E_Reader/
 如果您在使用過程中遇到任何問題，請參考相關文檔或檢查程式碼中的註釋。新的架構將為您帶來更好的開發體驗和更穩定的應用程式運行。
 `
 }
+
+## 📚 常見語言對照
+
+| 語言        | 模型檔名             |
+|-------------|----------------------|
+| 英文        | `eng.traineddata`    |
+| 繁體中文    | `chi_tra.traineddata`|
+| 簡體中文    | `chi_sim.traineddata`|
+| 日文        | `jpn.traineddata`    |
+| 韓文        | `kor.traineddata`    |
+| 法文        | `fra.traineddata`    |
+| 德文        | `deu.traineddata`    |
+| 西班牙文    | `spa.traineddata`    |
+| 葡萄牙文    | `por.traineddata`    |
+| 義大利文    | `ita.traineddata`    |
+| 俄文        | `rus.traineddata`    |
+| 荷蘭文      | `nld.traineddata`    |
+| 印尼文      | `ind.traineddata`    |
+| 越南文      | `vie.traineddata`    |
+| 泰文        | `tha.traineddata`    |
+| 阿拉伯文    | `ara.traineddata`    |
+| 印地語      | `hin.traineddata`    |
+| 馬拉地語    | `mar.traineddata`    |
+| 泰盧固語    | `tel.traineddata`    |
+| 烏爾都語    | `urd.traineddata`    |
+| 孟加拉文    | `ben.traineddata`    |
+
+---
+
+## 🧬 腳本/文字系統模型
+
+| 腳本類型         | 模型檔名                |
+|------------------|-------------------------|
+| 阿拉伯字母       | `Arabic.traineddata`    |
+| 西里爾字母       | `Cyrillic.traineddata`  |
+| 拉丁字母         | `Latin.traineddata`     |
+| 梵文（天城體）    | `Devanagari.traineddata`|
+| 希伯來字母       | `Hebrew.traineddata`    |
+| 希臘字母         | `Greek.traineddata`     |
+| 喬治亞文         | `Georgian.traineddata`  |
+| 花體德文（Fraktur）| `Fraktur.traineddata`   |
+| 中文（簡體）      | `HanS.traineddata`      |
+| 中文（繁體）      | `HanT.traineddata`      |
+| 韓文字           | `Hangul.traineddata`    |
+| 泰文字           | `Thai.traineddata`      |
+| 錫蘭文           | `Sinhala.traineddata`   |
+| 藏文             | `Tibetan.traineddata`   |
+| 埃塞俄比亞文     | `Ethiopic.traineddata`  |
