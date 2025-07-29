@@ -54,18 +54,14 @@ public class UIControlsFactory {
      */
     public HBox createTopControls(MainController controller) {
         // 主要功能按鈕
-        Button fileManagerBtn = createButton("🗄️ 檔案管理器", controller::showFileManager);
         Button returnToManagerBtn = createButton("↩️ 返回檔案管理", () -> {
-            controller.showFileManager();
-            controller.getPrimaryStage().hide(); // 隱藏閱讀器視窗
+            // 修正：直接顯示檔案管理器，不重複創建
+            controller.getFileManagerController().show();
         });
-        // 已移除 PDF匯入 和 圖片資料夾匯入 按鈕 - 進入檔案後不需要再使用檔案匯入功能
-        // Button openFolderBtn = createButton("📂 圖片資料夾", controller::openImageFolder);
-        // Button openPdfBtn = createButton("📄 PDF檔案", controller::openPdfFile);
+        // 已移除檔案管理器按鈕和離開按鈕
         Button bookmarkBtn = createButton("🔖 書籤管理", controller::showBookmarkDialog);
         Button settingsBtn = createButton("⚙️ 設定", controller::showSettingsDialog);
         Button fullscreenBtn = createButton("🔲 全螢幕", controller::toggleFullscreen);
-        Button exitBtn = createButton("❌ 離開", () -> controller.getPrimaryStage().close());
         
         // 共用功能按鈕
         autoScrollBtn = createButton("⏯️ 自動翻頁", controller::toggleAutoScroll);
@@ -84,9 +80,8 @@ public class UIControlsFactory {
         
         // 基本按鈕始終顯示
         topControls.getChildren().addAll(
-            returnToManagerBtn, fileManagerBtn, 
-            bookmarkBtn, settingsBtn, textModeBtn, autoScrollBtn, 
-            nightModeBtn, eyeCareBtn, fullscreenBtn, exitBtn
+            returnToManagerBtn, bookmarkBtn, settingsBtn, textModeBtn, autoScrollBtn, 
+            nightModeBtn, eyeCareBtn, fullscreenBtn
         );
         
         return topControls;

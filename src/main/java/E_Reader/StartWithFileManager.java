@@ -31,8 +31,8 @@ public class StartWithFileManager extends Application {
             // 初始化主控制器
             mainController = new MainController(readerStage);
             
-            // 獲取檔案管理器控制器並設置為新的視窗
-            FileManagerController fileManagerController = new FileManagerController(fileManagerStage);
+            // 獲取檔案管理器單例實例
+            FileManagerController fileManagerController = FileManagerController.getInstance();
             
             // 設定檔案選擇回調
             fileManagerController.initialize(file -> {

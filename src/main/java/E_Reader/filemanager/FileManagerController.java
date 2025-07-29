@@ -29,6 +29,9 @@ import java.util.stream.Collectors;
  */
 public class FileManagerController {
 
+    // 單例模式
+    private static FileManagerController instance;
+    
     private final Stage primaryStage;
     private final Path libraryPath;
     private final FileManagerData fileManagerData;
@@ -56,8 +59,8 @@ public class FileManagerController {
         void onFileOpen(File file);
     }
 
-    public FileManagerController(Stage primaryStage) {
-        this.primaryStage = primaryStage;
+    public FileManagerController() {
+        this.primaryStage = new Stage();
         this.libraryPath = Paths.get(System.getProperty("user.home"), "E_Reader_Library");
         this.fileManagerData = new FileManagerData(libraryPath);
 
@@ -67,6 +70,13 @@ public class FileManagerController {
         } catch (IOException e) {
             System.err.println("無法創建檔案庫目錄: " + e.getMessage());
         }
+    }
+    
+    public static FileManagerController getInstance() {
+        if (instance == null) {
+            instance = new FileManagerController();
+        }
+        return instance;
     }
 
     public void initialize(FileOpenCallback callback) {
@@ -815,8 +825,8 @@ public class FileManagerController {
             File physicalFile = new File(file.getFilePath());
             if (physicalFile.exists()) {
                 fileOpenCallback.onFileOpen(physicalFile);
-                // 關閉檔案管理器視窗，回到閱讀器
-                primaryStage.close();
+                // 隱藏檔案管理器視窗，不關閉以便未來可以再次開啟
+                primaryStage.hide();
             } else {
                 showError("開啟失敗", "檔案不存在或已被移動");
             }
@@ -915,10 +925,20 @@ public class FileManagerController {
 
     // 顯示檔案管理器
     public void show() {
-        Scene scene = new Scene(mainLayout);
-        primaryStage.setScene(scene);
+        // 檢查是否已經有 Scene，避免重複創建
+        if (primaryStage.getScene() == null) {
+            Scene scene = new Scene(mainLayout);
+            primaryStage.setScene(scene);
+        }
         primaryStage.setTitle("E_Reader - 檔案管理器");
-        primaryStage.show();
+        
+        // 如果視窗未顯示，則顯示它
+        if (!primaryStage.isShowing()) {
+            primaryStage.show();
+        } else {
+            // 如果已經顯示，則將其置於前景
+            primaryStage.toFront();
+        }
 
         // 載入初始資料
         loadCurrentFolder();
