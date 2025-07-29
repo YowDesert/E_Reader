@@ -55,8 +55,8 @@ public class UIControlsFactory {
     public HBox createTopControls(MainController controller) {
         // 主要功能按鈕
         Button returnToManagerBtn = createButton("↩️ 返回檔案管理", () -> {
-            // 修正：直接顯示檔案管理器，不重複創建
-            controller.getFileManagerController().show();
+            // 返回檔案管理器，會自動關閉當前檔案
+            controller.showFileManager();
         });
         // 已移除檔案管理器按鈕和離開按鈕
         Button bookmarkBtn = createButton("🔖 書籤管理", controller::showBookmarkDialog);

@@ -272,6 +272,11 @@ public class MainController {
      * 開啟檔案管理器
      */
     public void showFileManager() {
+        // 如果有開啟的檔案，先關閉它
+        if (!stateManager.getCurrentFilePath().isEmpty()) {
+            closeCurrentFile();
+        }
+        
         // 修正：直接顯示檔案管理器，不重複創建
         fileManagerController.show();
     }
@@ -592,6 +597,42 @@ public class MainController {
         }
     }
 
+    /**
+     * 關閉當前開啟的檔案
+     */
+    private void closeCurrentFile() {
+        // 停止所有計時器
+        if (stateManager.isAutoScrolling()) {
+            toggleAutoScroll();
+        }
+        
+        // 如果設定要求記住最後檔案，儲存閱讀位置
+        if (settingsManager.isRememberLastFile() && !stateManager.getCurrentFilePath().isEmpty()) {
+            saveLastReadingPosition();
+        }
+        
+        // 清空狀態
+        stateManager.clearCurrentFile();
+        
+        // 清空檢視器
+        imageViewer.clearImages();
+        textRenderer.clearPages();
+        
+        // 切換回圖片模式
+        if (stateManager.isTextMode()) {
+            stateManager.setTextMode(false);
+            switchToImageMode();
+            resetTextModeButton();
+        }
+        
+        // 重置UI
+        primaryStage.setTitle("E_Reader 漫畫＆PDF閱讀器 v3.0 Enhanced");
+        updateUI();
+        
+        // 顯示關閉通知
+        showNotification("檔案已關閉", "檔案已關閉，可以開啟新檔案");
+    }
+    
     // 工具方法
     private void handleImageClick(MouseEvent event) {
         if (stateManager.isTextMode()) return;
