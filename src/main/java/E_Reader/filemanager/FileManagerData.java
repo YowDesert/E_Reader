@@ -33,7 +33,6 @@ public class FileManagerData {
         } catch (IOException e) {
             System.err.println("無法創建資料庫目錄: " + e.getMessage());
         }
-        
         // 載入現有的檔案和資料夾
         loadExistingData();
     }

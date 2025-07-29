@@ -51,6 +51,8 @@ public class FileManagerController {
     private String currentFolderId = "root";
     private List<FileItem> currentFiles = new ArrayList<>();
     private List<FolderItem> currentFolders = new ArrayList<>();
+    private boolean isGridView = true; // 檢視模式：true=網格，false=清單
+    private TreeView<FolderTreeItem> folderTreeView; // 資料夾樹狀檢視
 
     // 回調函數
     private FileOpenCallback fileOpenCallback;
@@ -94,9 +96,9 @@ public class FileManagerController {
         VBox topSection = createTopSection();
         mainLayout.setTop(topSection);
 
-        // 左側資料夾面板
-        folderPanel = createFolderPanel();
-        ScrollPane folderScrollPane = new ScrollPane(folderPanel);
+        // 左側資料夾面板（使用TreeView）
+        folderTreeView = createFolderTreeView();
+        ScrollPane folderScrollPane = new ScrollPane(folderTreeView);
         folderScrollPane.setPrefWidth(250);
         folderScrollPane.setFitToWidth(true);
         folderScrollPane.setStyle("-fx-background-color: #f5f5f5;");
@@ -164,6 +166,16 @@ public class FileManagerController {
         gridViewBtn.setToggleGroup(viewGroup);
         listViewBtn.setToggleGroup(viewGroup);
         gridViewBtn.setSelected(true);
+        
+        // 檢視模式切換事件
+        gridViewBtn.setOnAction(e -> {
+            isGridView = true;
+            refreshFileView();
+        });
+        listViewBtn.setOnAction(e -> {
+            isGridView = false;
+            refreshFileView();
+        });
 
         toolbar.getChildren().addAll(
                 newFolderBtn, refreshBtn,
@@ -180,61 +192,96 @@ public class FileManagerController {
         return topSection;
     }
 
-    private VBox createFolderPanel() {
-        VBox panel = new VBox(5);
-        panel.setPadding(new Insets(10));
+    private TreeView<FolderTreeItem> createFolderTreeView() {
+        TreeView<FolderTreeItem> treeView = new TreeView<>();
+        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
 
-        // 資料夾標題
-        Label titleLabel = new Label("資料夾");
-        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 0 0 10 0;");
-
-        // 根目錄項目
-        VBox rootItem = createFolderTreeItem("📚 我的資料庫", "root", true);
-
-        panel.getChildren().addAll(titleLabel, rootItem);
-        return panel;
-    }
-
-    private VBox createFolderTreeItem(String name, String folderId, boolean isRoot) {
-        VBox item = new VBox();
-
-        HBox folderRow = new HBox(5);
-        folderRow.setPadding(new Insets(5));
-        folderRow.setAlignment(Pos.CENTER_LEFT);
-        folderRow.setStyle("-fx-background-radius: 5px; -fx-cursor: hand;");
-
-        if (folderId.equals(currentFolderId)) {
-            folderRow.setStyle(folderRow.getStyle() + "; -fx-background-color: #e3f2fd;");
+        if (!fileManagerData.getSubFolders("root").isEmpty()) {
+            rootItem.getChildren().add(new TreeItem<>(
+                    new FolderTreeItem("載入中...", "loading")
+            ));
         }
+        // 創建根節點
+//        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
+        rootItem.setExpanded(true);
+        treeView.setRoot(rootItem);
+        treeView.setShowRoot(true);
 
-        Label folderLabel = new Label(name);
-        folderLabel.setStyle("-fx-font-size: 14px;");
-
-        folderRow.getChildren().add(folderLabel);
-
+        // 設定樣式
+        treeView.setStyle("-fx-background-color: #f5f5f5;");
+        
         // 點擊事件
-        folderRow.setOnMouseClicked(e -> {
-            if (e.getButton() == MouseButton.PRIMARY) {
+        treeView.setOnMouseClicked(e -> {
+            TreeItem<FolderTreeItem> selectedItem = treeView.getSelectionModel().getSelectedItem();
+            if (selectedItem != null && e.getClickCount() == 1) {
+                String folderId = selectedItem.getValue().getId();
                 navigateToFolder(folderId);
-            } else if (e.getButton() == MouseButton.SECONDARY && !isRoot) {
-                showFolderContextMenu(folderRow, folderId, e.getScreenX(), e.getScreenY());
+            }
+        });
+        
+        // 展開事件：懶惰載入子資料夾
+        treeView.addEventHandler(TreeItem.branchExpandedEvent(), event -> {
+            TreeItem<?> item = event.getTreeItem();
+            if (item != null && item.getValue() instanceof FolderTreeItem folderTreeItem) {
+                TreeItem<FolderTreeItem> expandedItem = (TreeItem<FolderTreeItem>) item;
+
+                // ✅ 只在第一次展開時載入子項目（避免重複載入）
+                if (expandedItem.getChildren().size() == 1 && expandedItem.getChildren().get(0).getValue() == null) {
+                    expandedItem.getChildren().clear(); // 移除 dummy
+                    loadChildFolders(expandedItem);
+                }
             }
         });
 
-        item.getChildren().add(folderRow);
 
-        // 如果不是根目錄，載入子資料夾
-        if (!isRoot) {
-            List<FolderItem> subFolders = fileManagerData.getSubFolders(folderId);
-            for (FolderItem subFolder : subFolders) {
-                VBox subItem = createFolderTreeItem("📁 " + subFolder.getName(), subFolder.getId(), false);
-                subItem.setPadding(new Insets(0, 0, 0, 20));
-                item.getChildren().add(subItem);
+
+        // 初始載入根目錄的子資料夾
+        loadChildFolders(rootItem);
+        
+        return treeView;
+    }
+
+    private void loadChildFolders(TreeItem<FolderTreeItem> parentItem) {
+        FolderTreeItem parentValue = parentItem.getValue();
+        String parentId = parentValue.getId();
+        System.out.println("展開節點: " + parentValue.getName());
+
+        // ✅ 檢查 placeholder ("loading")，並移除
+        if (!parentItem.getChildren().isEmpty()) {
+            TreeItem<FolderTreeItem> firstChild = parentItem.getChildren().get(0);
+            FolderTreeItem firstValue = firstChild.getValue();
+            if (firstValue != null && "loading".equals(firstValue.getId())) {
+                System.out.println("移除 placeholder");
+                parentItem.getChildren().clear();
+            } else {
+                System.out.println("已經載入過子節點，跳過");
+                return;
             }
         }
 
-        return item;
+        List<FolderItem> subFolders = fileManagerData.getSubFolders(parentId);
+        System.out.println("子資料夾數量: " + subFolders.size());
+
+        for (FolderItem folder : subFolders) {
+            TreeItem<FolderTreeItem> childItem = new TreeItem<>(
+                    new FolderTreeItem("📁 " + folder.getName(), folder.getId())
+            );
+
+            // 如果還有子資料夾，加 placeholder
+            if (!fileManagerData.getSubFolders(folder.getId()).isEmpty()) {
+                childItem.getChildren().add(new TreeItem<>(
+                        new FolderTreeItem("載入中...", "loading")
+                ));
+            }
+
+            parentItem.getChildren().add(childItem);
+        }
     }
+
+
+
+
+    // 移除舊的createFolderTreeItem方法，改用TreeView
 
     private void setupEventHandlers() {
         // 拖拽支持（簡化版本）
@@ -280,7 +327,15 @@ public class FileManagerController {
 
     private void refreshFileView() {
         fileGrid.getChildren().clear();
-
+        
+        if (isGridView) {
+            refreshGridView();
+        } else {
+            refreshListView();
+        }
+    }
+    
+    private void refreshGridView() {
         int column = 0;
         int row = 0;
         int maxColumns = 5; // 每行最多5個項目
@@ -308,6 +363,31 @@ public class FileManagerController {
                 row++;
             }
         }
+    }
+    
+    private void refreshListView() {
+        fileGrid.setHgap(0);
+        fileGrid.setVgap(2);
+        
+        int row = 0;
+        
+        // 先顯示資料夾
+        for (FolderItem folder : currentFolders) {
+            HBox folderRow = createFolderListItem(folder);
+            fileGrid.add(folderRow, 0, row);
+            row++;
+        }
+        
+        // 再顯示檔案
+        for (FileItem file : currentFiles) {
+            HBox fileRow = createFileListItem(file);
+            fileGrid.add(fileRow, 0, row);
+            row++;
+        }
+        
+        // 重置間距設定
+        fileGrid.setHgap(15);
+        fileGrid.setVgap(15);
     }
 
     private VBox createFolderCard(FolderItem folder) {
@@ -351,6 +431,99 @@ public class FileManagerController {
         });
 
         return card;
+    }
+    
+    private HBox createFolderListItem(FolderItem folder) {
+        HBox row = new HBox(10);
+        row.setPrefWidth(600);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(8));
+        row.setStyle("-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+        
+        // 資料夾圖示
+        Label iconLabel = new Label("📁");
+        iconLabel.setStyle("-fx-font-size: 20px;");
+        iconLabel.setPrefWidth(30);
+        
+        // 資料夾名稱
+        Label nameLabel = new Label(folder.getName());
+        nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        nameLabel.setPrefWidth(200);
+        
+        // 檔案數量
+        int fileCount = fileManagerData.getFileCount(folder.getId());
+        Label countLabel = new Label(fileCount + " 個項目");
+        countLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+        countLabel.setPrefWidth(100);
+        
+        // 創建日期
+        Label dateLabel = new Label(folder.getCreatedDate().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")));
+        dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+        
+        row.getChildren().addAll(iconLabel, nameLabel, countLabel, dateLabel);
+        
+        // 懸停效果
+        row.setOnMouseEntered(e -> row.setStyle(row.getStyle() + "; -fx-background-color: #f8f9fa;"));
+        row.setOnMouseExited(e -> row.setStyle(row.getStyle().replace("; -fx-background-color: #f8f9fa", "")));
+        
+        // 點擊事件
+        row.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                if (e.getClickCount() == 2) {
+                    navigateToFolder(folder.getId());
+                }
+            } else if (e.getButton() == MouseButton.SECONDARY) {
+                showFolderContextMenu(row, folder.getId(), e.getScreenX(), e.getScreenY());
+            }
+        });
+        
+        return row;
+    }
+    
+    private HBox createFileListItem(FileItem file) {
+        HBox row = new HBox(10);
+        row.setPrefWidth(600);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(8));
+        row.setStyle("-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+        
+        // 檔案圖示
+        Label iconLabel = new Label(getFileIcon(file.getExtension()));
+        iconLabel.setStyle("-fx-font-size: 20px;");
+        iconLabel.setPrefWidth(30);
+        
+        // 檔案名稱
+        Label nameLabel = new Label(file.getName());
+        nameLabel.setStyle("-fx-font-size: 14px;");
+        nameLabel.setPrefWidth(250);
+        
+        // 檔案大小
+        Label sizeLabel = new Label(formatFileSize(file.getSize()));
+        sizeLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+        sizeLabel.setPrefWidth(80);
+        
+        // 修改日期
+        Label dateLabel = new Label(file.getLastModified().format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")));
+        dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+        
+        row.getChildren().addAll(iconLabel, nameLabel, sizeLabel, dateLabel);
+        
+        // 懸停效果
+        row.setOnMouseEntered(e -> row.setStyle(row.getStyle() + "; -fx-background-color: #f8f9fa;"));
+        row.setOnMouseExited(e -> row.setStyle(row.getStyle().replace("; -fx-background-color: #f8f9fa", "")));
+        
+        // 點擊事件
+        row.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) {
+                if (e.getClickCount() == 2) {
+                    openFile(file);
+                }
+            } else if (e.getButton() == MouseButton.SECONDARY) {
+                showFileContextMenu(row, file, e.getScreenX(), e.getScreenY());
+            }
+        });
+        
+        return row;
     }
 
     private VBox createFileCard(FileItem file) {
@@ -452,85 +625,34 @@ public class FileManagerController {
     }
 
     private void refreshFolderPanel() {
-        folderPanel.getChildren().clear();
-
-        Label titleLabel = new Label("資料夾");
-        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 0 0 10 0;");
-
-        VBox rootItem = createFolderTreeWithAllFolders();
-
-        folderPanel.getChildren().addAll(titleLabel, rootItem);
+        // 重新創建樹狀結構
+        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
+        rootItem.setExpanded(true);
+        folderTreeView.setRoot(rootItem);
+        
+        // 載入子資料夾
+        loadChildFolders(rootItem);
+        
+        // 選擇當前資料夾
+        selectCurrentFolderInTree(rootItem, currentFolderId);
     }
-
-    private VBox createFolderTreeWithAllFolders() {
-        return buildFolderTree("root", 0);
-    }
-
-    private VBox buildFolderTree(String parentId, int depth) {
-        VBox container = new VBox();
-
-        // 根目錄項目
-        if (depth == 0) {
-            HBox rootRow = new HBox(5);
-            rootRow.setPadding(new Insets(5));
-            rootRow.setAlignment(Pos.CENTER_LEFT);
-            rootRow.setStyle("-fx-background-radius: 5px; -fx-cursor: hand;");
-
-            if ("root".equals(currentFolderId)) {
-                rootRow.setStyle(rootRow.getStyle() + "; -fx-background-color: #e3f2fd;");
-            }
-
-            Label rootLabel = new Label("📚 我的資料庫");
-            rootLabel.setStyle("-fx-font-size: 14px;");
-
-            rootRow.getChildren().add(rootLabel);
-            rootRow.setOnMouseClicked(e -> {
-                if (e.getButton() == MouseButton.PRIMARY) {
-                    navigateToFolder("root");
-                }
-            });
-
-            container.getChildren().add(rootRow);
+    
+    private boolean selectCurrentFolderInTree(TreeItem<FolderTreeItem> item, String targetFolderId) {
+        if (item.getValue().getId().equals(targetFolderId)) {
+            folderTreeView.getSelectionModel().select(item);
+            return true;
         }
-
-        // 子資料夾
-        List<FolderItem> subFolders = fileManagerData.getSubFolders(parentId);
-        for (FolderItem folder : subFolders) {
-            HBox folderRow = new HBox(5);
-            folderRow.setPadding(new Insets(5));
-            folderRow.setAlignment(Pos.CENTER_LEFT);
-            folderRow.setStyle("-fx-background-radius: 5px; -fx-cursor: hand;");
-
-            // 縮排
-            if (depth > 0) {
-                folderRow.setPadding(new Insets(5, 5, 5, 5 + (depth * 20)));
+        
+        for (TreeItem<FolderTreeItem> child : item.getChildren()) {
+            if (selectCurrentFolderInTree(child, targetFolderId)) {
+                return true;
             }
-
-            if (folder.getId().equals(currentFolderId)) {
-                folderRow.setStyle(folderRow.getStyle() + "; -fx-background-color: #e3f2fd;");
-            }
-
-            Label folderLabel = new Label("📁 " + folder.getName());
-            folderLabel.setStyle("-fx-font-size: 14px;");
-
-            folderRow.getChildren().add(folderLabel);
-            folderRow.setOnMouseClicked(e -> {
-                if (e.getButton() == MouseButton.PRIMARY) {
-                    navigateToFolder(folder.getId());
-                } else if (e.getButton() == MouseButton.SECONDARY) {
-                    showFolderContextMenu(folderRow, folder.getId(), e.getScreenX(), e.getScreenY());
-                }
-            });
-
-            container.getChildren().add(folderRow);
-
-            // 遞迴載入子資料夾
-            VBox subTree = buildFolderTree(folder.getId(), depth + 1);
-            container.getChildren().add(subTree);
         }
-
-        return container;
+        
+        return false;
     }
+
+    // 移除舊的buildFolderTree方法，改用TreeView的懶惰載入
 
     // 對話框和功能方法
     private void showImportDialog() {
@@ -853,14 +975,28 @@ public class FileManagerController {
                 .collect(Collectors.toList());
 
         // 更新檢視
-        fileGrid.getChildren().clear();
+        displayFilteredItems(filteredFolders, filteredFiles);
 
+        statusLabel.setText("找到 " + filteredFiles.size() + " 個檔案，" + filteredFolders.size() + " 個資料夾");
+    }
+    
+    private void displayFilteredItems(List<FolderItem> folders, List<FileItem> files) {
+        fileGrid.getChildren().clear();
+        
+        if (isGridView) {
+            displayFilteredItemsGrid(folders, files);
+        } else {
+            displayFilteredItemsList(folders, files);
+        }
+    }
+    
+    private void displayFilteredItemsGrid(List<FolderItem> folders, List<FileItem> files) {
         int column = 0;
         int row = 0;
         int maxColumns = 5;
 
         // 顯示過濾後的資料夾
-        for (FolderItem folder : filteredFolders) {
+        for (FolderItem folder : folders) {
             VBox folderCard = createFolderCard(folder);
             fileGrid.add(folderCard, column, row);
 
@@ -872,7 +1008,7 @@ public class FileManagerController {
         }
 
         // 顯示過濾後的檔案
-        for (FileItem file : filteredFiles) {
+        for (FileItem file : files) {
             VBox fileCard = createFileCard(file);
             fileGrid.add(fileCard, column, row);
 
@@ -882,8 +1018,31 @@ public class FileManagerController {
                 row++;
             }
         }
-
-        statusLabel.setText("找到 " + filteredFiles.size() + " 個檔案，" + filteredFolders.size() + " 個資料夾");
+    }
+    
+    private void displayFilteredItemsList(List<FolderItem> folders, List<FileItem> files) {
+        fileGrid.setHgap(0);
+        fileGrid.setVgap(2);
+        
+        int row = 0;
+        
+        // 顯示過濾後的資料夾
+        for (FolderItem folder : folders) {
+            HBox folderRow = createFolderListItem(folder);
+            fileGrid.add(folderRow, 0, row);
+            row++;
+        }
+        
+        // 顯示過濾後的檔案
+        for (FileItem file : files) {
+            HBox fileRow = createFileListItem(file);
+            fileGrid.add(fileRow, 0, row);
+            row++;
+        }
+        
+        // 重置間距設定
+        fileGrid.setHgap(15);
+        fileGrid.setVgap(15);
     }
 
     private void sortAndRefreshFiles() {
