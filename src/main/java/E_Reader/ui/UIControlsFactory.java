@@ -21,6 +21,7 @@ public class UIControlsFactory {
     private Button autoScrollBtn;
     private Button nightModeBtn;
     private Button eyeCareBtn;
+    private Button toggleNavBarBtn; // 新增：導覽列切換按鈕
     
     // 圖片模式專用按鈕
     private Button zoomInBtn;
@@ -58,6 +59,12 @@ public class UIControlsFactory {
             // 返回檔案管理器，會自動關閉當前檔案
             controller.showFileManager();
         });
+        
+        // 導覽列控制按鈕
+        toggleNavBarBtn = createButton("🙈 隱藏導覽列", () -> {
+            controller.toggleNavigationBar();
+        });
+        
         // 已移除檔案管理器按鈕和離開按鈕
         Button bookmarkBtn = createButton("🔖 書籤管理", controller::showBookmarkDialog);
         Button settingsBtn = createButton("⚙️ 設定", controller::showSettingsDialog);
@@ -80,7 +87,7 @@ public class UIControlsFactory {
         
         // 基本按鈕始終顯示
         topControls.getChildren().addAll(
-            returnToManagerBtn, bookmarkBtn, settingsBtn, textModeBtn, autoScrollBtn, 
+            returnToManagerBtn, toggleNavBarBtn, bookmarkBtn, settingsBtn, textModeBtn, autoScrollBtn, 
             nightModeBtn, eyeCareBtn, fullscreenBtn
         );
         
@@ -244,6 +251,7 @@ public class UIControlsFactory {
     public Button getAutoScrollButton() { return autoScrollBtn; }
     public Button getNightModeButton() { return nightModeBtn; }
     public Button getEyeCareButton() { return eyeCareBtn; }
+    public Button getToggleNavBarButton() { return toggleNavBarBtn; } // 新增
     public HBox getTopControls() { return topControls; }
     public HBox getBottomControls() { return bottomControls; }
     

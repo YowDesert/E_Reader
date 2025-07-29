@@ -61,8 +61,12 @@ public class MainController {
     private Button autoScrollBtn;
     private Button nightModeBtn;
     private Button eyeCareBtn;
+    private Button toggleNavBarBtn; // 新增：導覽列切換按鈕
     private ProgressBar readingProgressBar;
     private Label readingTimeLabel;
+    
+    // 導覽列控制器
+    private NavigationBarController navBarController;
 
     public MainController(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -102,6 +106,11 @@ public class MainController {
                 showNotification("護眼提醒", "您已經閱讀30分鐘了，建議休息5-10分鐘！"));
 
         setupWindowCloseHandler();
+        
+        // 如果設定要求記住最後檔案，嘗試載入
+        if (settingsManager.isRememberLastFile()) {
+            loadLastReadingPosition();
+        }
     }
 
     private void setupMainLayout() {
@@ -115,6 +124,9 @@ public class MainController {
         controlsContainer = new VBox();
         controlsContainer.getChildren().addAll(topControls, bottomControls);
         mainLayout.setTop(controlsContainer);
+        
+        // 初始化導覽列控制器
+        navBarController = new NavigationBarController(controlsContainer, primaryStage, centerPane);
 
         Scene scene = new Scene(mainLayout, 1200, 800);
         scene.getRoot().setStyle("-fx-font-family: 'Microsoft JhengHei', sans-serif;");
@@ -165,6 +177,7 @@ public class MainController {
         autoScrollBtn = controlsFactory.getAutoScrollButton();
         nightModeBtn = controlsFactory.getNightModeButton();
         eyeCareBtn = controlsFactory.getEyeCareButton();
+        toggleNavBarBtn = controlsFactory.getToggleNavBarButton(); // 新增
         pageField = controlsFactory.getPageField();
         
         // 初始化時更新按鈕顯示（預設為圖片模式）
@@ -748,6 +761,26 @@ public class MainController {
             showNotification("專注模式", "按 F 鍵或點擊中央退出專注模式");
         }
     }
+    
+    /**
+     * 切換導覽列顯示/隱藏狀態
+     */
+    public void toggleNavigationBar() {
+        if (navBarController != null) {
+            navBarController.toggleNavigationBar();
+            
+            // 更新按鈕顯示
+            if (navBarController.isNavigationBarPinned()) {
+                toggleNavBarBtn.setText("🙈 隱藏導覽列");
+                toggleNavBarBtn.setStyle(toggleNavBarBtn.getStyle().replace("; -fx-background-color: #dc3545", ""));
+                showNotification("導覽列已顯示", "導覽列現在為常駐顯示模式");
+            } else {
+                toggleNavBarBtn.setText("🙉 顯示導覽列");
+                toggleNavBarBtn.setStyle(toggleNavBarBtn.getStyle() + "; -fx-background-color: #dc3545");
+                showNotification("導覽列已隱藏", "將滑鼠移至頂部或向上滾動可暫時顯示導覽列");
+            }
+        }
+    }
 
     // 自動翻頁功能
     public void toggleAutoScroll() {
@@ -872,6 +905,81 @@ public class MainController {
         readingTimeLabel.setText(String.format("閱讀時間: %02d:%02d:%02d", hours, minutes, seconds));
     }
 
+    // 載入最後閱讀位置
+    public void loadLastReadingPosition() {
+        try {
+            Properties props = new Properties();
+            File propertiesFile = new File("last_reading.properties");
+            
+            if (!propertiesFile.exists()) {
+                return; // 沒有儲存的閱讀位置
+            }
+            
+            try (java.io.FileInputStream in = new java.io.FileInputStream(propertiesFile)) {
+                props.load(in);
+            }
+            
+            String lastFilePath = props.getProperty("lastFile");
+            String lastPageStr = props.getProperty("lastPage", "0");
+            String mode = props.getProperty("mode", "image");
+            
+            if (lastFilePath == null || lastFilePath.isEmpty()) {
+                return;
+            }
+            
+            File lastFile = new File(lastFilePath);
+            if (!lastFile.exists()) {
+                showNotification("提醒", "上次閱讀的檔案已不存在: " + lastFile.getName());
+                return;
+            }
+            int lastPage = 0;
+            try {
+                lastPage = Integer.parseInt(lastPageStr);
+            } catch (NumberFormatException e) {
+                lastPage = 0;
+            }
+            final int targetPage = lastPage;
+
+            // 自動開啟最後閱讀的檔案
+            openFileFromManager(lastFile);
+            
+            // 等待檔案載入完成後跳轉到最後閱讀的頁面
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    Thread.sleep(500); // 等待檔案載入完成
+                    
+                    // 如果需要切換到文字模式
+                    if ("text".equals(mode) && !stateManager.isTextMode()) {
+                        toggleTextMode();
+                        // 再次延遲，等待文字模式載入完成
+                        javafx.application.Platform.runLater(() -> {
+                            try {
+                                Thread.sleep(1000);
+                                goToPage(targetPage);
+                                showNotification("歡迎回來", 
+                                    String.format("已自動開啟上次閱讀的檔案\n檔案: %s\n上次閱讀到的頁數: %d\n模式: %s",
+                                        lastFile.getName(), targetPage + 1, "text".equals(mode) ? "文字模式" : "圖片模式"));
+                            } catch (InterruptedException ex) {
+                                Thread.currentThread().interrupt();
+                            }
+                        });
+                    } else {
+                        goToPage(targetPage);
+                        showNotification("歡迎回來", 
+                            String.format("已自動開啟上次閱讀的檔案\n檔案: %s\n頁數: %d\n模式: %s", 
+                                lastFile.getName(), targetPage + 1, "text".equals(mode) ? "文字模式" : "圖片模式"));
+                    }
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            
+        } catch (Exception e) {
+            System.err.println("無法載入最後閱讀位置: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
     // 儲存最後閱讀位置
     public void saveLastReadingPosition() {
         try {
