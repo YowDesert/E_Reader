@@ -195,6 +195,21 @@ public class TextRenderer {
             showNoContentMessage();
         }
     }
+    
+    public void clearPages() {
+        this.originalPages = null;
+        this.formattedPages = null;
+        this.currentPageIndex = 0;
+        this.currentSearchTerm = "";
+        
+        // 清空顯示內容
+        if (pageContainer != null) {
+            pageContainer.getChildren().clear();
+        }
+        
+        // 顯示無內容訊息
+        showNoContentMessage();
+    }
 
     private void formatPages() {
         if (originalPages == null || originalPages.isEmpty()) {

@@ -61,6 +61,16 @@ public class ImageViewer {
         currentIndex = 0;
         showImage();
     }
+    
+    public void clearImages() {
+        this.images = null;
+        this.currentIndex = 0;
+        this.zoomLevel = 1.0;
+        this.fitMode = FitMode.FIT_WIDTH;
+        imageView.setImage(null);
+        imageView.setRotate(0);
+        pageLabel.setText("Page: 0 / 0");
+    }
 
     public void nextPage() {
         if (images == null || images.isEmpty()) return;

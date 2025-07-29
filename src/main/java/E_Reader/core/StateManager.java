@@ -50,6 +50,16 @@ public class StateManager {
         this.currentTextPages = null;
     }
     
+    public void clearCurrentFile() {
+        clearFileState();
+        // 重置其他相關狀態
+        this.isAutoScrolling = false;
+        // 保留閱讀時間累計，但重置當前會話
+        long currentSessionTime = System.currentTimeMillis() - readingStartTime;
+        this.totalReadingTime += currentSessionTime;
+        this.readingStartTime = System.currentTimeMillis();
+    }
+    
     // Getter 和 Setter 方法
     public boolean isPdfMode() {
         return isPdfMode;
