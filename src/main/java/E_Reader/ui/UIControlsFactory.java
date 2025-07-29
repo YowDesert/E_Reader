@@ -10,6 +10,7 @@ import javafx.scene.layout.VBox;
 
 /**
  * UI控制面板工廠 - 負責創建和管理UI控制元件
+ * 根據模式動態顯示相應的功能按鈕
  */
 public class UIControlsFactory {
     
@@ -20,6 +21,23 @@ public class UIControlsFactory {
     private Button autoScrollBtn;
     private Button nightModeBtn;
     private Button eyeCareBtn;
+    
+    // 圖片模式專用按鈕
+    private Button zoomInBtn;
+    private Button zoomOutBtn;
+    private Button fitWidthBtn;
+    private Button fitHeightBtn;
+    private Button rotateBtn;
+    
+    // 文字模式專用按鈕
+    private Button fontSizeIncBtn;
+    private Button fontSizeDecBtn;
+    private Button lineSpacingBtn;
+    private Button searchBtn;
+    
+    // 控制列容器
+    private HBox topControls;
+    private HBox bottomControls;
     
     // 按鈕樣式常量
     private static final String BUTTON_STYLE = 
@@ -37,6 +55,10 @@ public class UIControlsFactory {
     public HBox createTopControls(MainController controller) {
         // 主要功能按鈕
         Button fileManagerBtn = createButton("🗄️ 檔案管理器", controller::showFileManager);
+        Button returnToManagerBtn = createButton("↩️ 返回檔案管理", () -> {
+            controller.showFileManager();
+            controller.getPrimaryStage().hide(); // 隱藏閱讀器視窗
+        });
         Button openFolderBtn = createButton("📂 圖片資料夾", controller::openImageFolder);
         Button openPdfBtn = createButton("📄 PDF檔案", controller::openPdfFile);
         Button bookmarkBtn = createButton("🔖 書籤管理", controller::showBookmarkDialog);
@@ -44,23 +66,26 @@ public class UIControlsFactory {
         Button fullscreenBtn = createButton("🔲 全螢幕", controller::toggleFullscreen);
         Button exitBtn = createButton("❌ 離開", () -> controller.getPrimaryStage().close());
         
-        // 新增功能按鈕
+        // 共用功能按鈕
         autoScrollBtn = createButton("⏯️ 自動翻頁", controller::toggleAutoScroll);
         nightModeBtn = createButton("🌙 夜間模式", controller::toggleNightMode);
         eyeCareBtn = createButton("👁️ 護眼模式", controller::toggleEyeCareMode);
         textModeBtn = createButton("📖 文字模式", controller::toggleTextMode);
-        Button searchBtn = createButton("🔍 搜尋文字", () -> showSearchDialog(controller));
+        
+        // 文字模式專用按鈕
+        searchBtn = createButton("🔍 搜尋文字", () -> showSearchDialog(controller));
         
         // 創建控制列容器
-        HBox topControls = new HBox(10);
+        topControls = new HBox(10);
         topControls.setAlignment(Pos.CENTER);
         topControls.setPadding(new Insets(10));
         topControls.setStyle("-fx-background-color: #333333;");
         
+        // 基本按鈕始終顯示
         topControls.getChildren().addAll(
-            fileManagerBtn, openFolderBtn, openPdfBtn, bookmarkBtn, settingsBtn,
-            textModeBtn, searchBtn, autoScrollBtn, nightModeBtn, eyeCareBtn,
-            fullscreenBtn, exitBtn
+            returnToManagerBtn, fileManagerBtn, openFolderBtn, openPdfBtn, 
+            bookmarkBtn, settingsBtn, textModeBtn, autoScrollBtn, 
+            nightModeBtn, eyeCareBtn, fullscreenBtn, exitBtn
         );
         
         return topControls;
@@ -91,43 +116,106 @@ public class UIControlsFactory {
             }
         });
         
-        // 縮放控制按鈕
-        Button zoomInBtn = createButton("🔍+", () -> zoomIn(controller));
-        Button zoomOutBtn = createButton("🔍-", () -> zoomOut(controller));
-        Button fitWidthBtn = createButton("適合寬度", () -> fitWidth(controller));
-        Button fitHeightBtn = createButton("適合高度", () -> fitHeight(controller));
-        Button rotateBtn = createButton("🔄 旋轉", () -> rotateImage(controller));
+        // 圖片模式專用按鈕
+        zoomInBtn = createButton("🔍+", () -> zoomIn(controller));
+        zoomOutBtn = createButton("🔍-", () -> zoomOut(controller));
+        fitWidthBtn = createButton("適合寬度", () -> fitWidth(controller));
+        fitHeightBtn = createButton("適合高度", () -> fitHeight(controller));
+        rotateBtn = createButton("🔄 旋轉", () -> rotateImage(controller));
+        
+        // 文字模式專用按鈕
+        fontSizeIncBtn = createButton("A+", () -> adjustFontSize(controller, 2));
+        fontSizeDecBtn = createButton("A-", () -> adjustFontSize(controller, -2));
+        lineSpacingBtn = createButton("📏 行距", () -> showLineSpacingDialog(controller));
         
         // 閱讀模式控制
         Button focusModeBtn = createButton("🎯 専注模式", controller::toggleFocusMode);
         Button speedReadBtn = createButton("⚡ 快速閱讀", () -> showSpeedReadingDialog(controller));
         
-        // 文字模式專用控制
-        Button fontSizeIncBtn = createButton("A+", () -> adjustFontSize(controller, 2));
-        Button fontSizeDecBtn = createButton("A-", () -> adjustFontSize(controller, -2));
-        Button lineSpacingBtn = createButton("📏 行距", () -> showLineSpacingDialog(controller));
-        
-        // 頁面標籤
-        pageLabel = new Label("頁面: 0 / 0");
-        pageLabel.setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
-        
         // 創建控制列容器
-        HBox bottomControls = new HBox(10);
+        bottomControls = new HBox(10);
         bottomControls.setAlignment(Pos.CENTER);
         bottomControls.setPadding(new Insets(10));
         bottomControls.setStyle("-fx-background-color: #333333;");
         
+        // 基本導航按鈕始終顯示
         bottomControls.getChildren().addAll(
             firstPageBtn, prevBtn, nextBtn, lastPageBtn,
             new Separator(), pageField, goToPageBtn,
-            new Separator(), zoomInBtn, zoomOutBtn,
-            fitWidthBtn, fitHeightBtn, rotateBtn,
-            new Separator(), fontSizeIncBtn, fontSizeDecBtn, lineSpacingBtn,
-            new Separator(), focusModeBtn, speedReadBtn,
-            new Separator(), pageLabel
+            new Separator(), focusModeBtn, speedReadBtn
         );
         
         return bottomControls;
+    }
+    
+    /**
+     * 根據當前模式更新控制按鈕的顯示
+     */
+    public void updateControlsForMode(boolean isTextMode) {
+        // 更新上方控制列
+        updateTopControlsForMode(isTextMode);
+        
+        // 更新下方控制列
+        updateBottomControlsForMode(isTextMode);
+    }
+    
+    /**
+     * 更新上方控制列的按鈕顯示
+     */
+    private void updateTopControlsForMode(boolean isTextMode) {
+        if (topControls == null) return;
+        
+        // 移除模式專用按鈕
+        topControls.getChildren().remove(searchBtn);
+        
+        // 根據模式添加相應按鈕
+        if (isTextMode) {
+            // 文字模式：添加搜尋按鈕
+            if (!topControls.getChildren().contains(searchBtn)) {
+                // 在文字模式按鈕後添加搜尋按鈕
+                int textModeIndex = topControls.getChildren().indexOf(textModeBtn);
+                if (textModeIndex >= 0) {
+                    topControls.getChildren().add(textModeIndex + 1, searchBtn);
+                }
+            }
+        }
+    }
+    
+    /**
+     * 更新下方控制列的按鈕顯示
+     */
+    private void updateBottomControlsForMode(boolean isTextMode) {
+        if (bottomControls == null) return;
+        
+        // 先移除所有模式專用按鈕和分隔符
+        bottomControls.getChildren().removeAll(
+            zoomInBtn, zoomOutBtn, fitWidthBtn, fitHeightBtn, rotateBtn,
+            fontSizeIncBtn, fontSizeDecBtn, lineSpacingBtn
+        );
+        
+        // 移除多餘的分隔符
+        bottomControls.getChildren().removeIf(node -> 
+            node instanceof Separator && 
+            bottomControls.getChildren().indexOf(node) > 4); // 保留前面的基本分隔符
+        
+        // 在最後的專注模式按鈕前添加新的分隔符和對應模式的按鈕
+        int insertIndex = bottomControls.getChildren().size() - 2; // 在專注模式按鈕前
+        
+        if (isTextMode) {
+            // 文字模式：添加字體和行距控制
+            bottomControls.getChildren().add(insertIndex, new Separator());
+            bottomControls.getChildren().add(insertIndex + 1, fontSizeIncBtn);
+            bottomControls.getChildren().add(insertIndex + 2, fontSizeDecBtn);
+            bottomControls.getChildren().add(insertIndex + 3, lineSpacingBtn);
+        } else {
+            // 圖片模式：添加縮放和旋轉控制
+            bottomControls.getChildren().add(insertIndex, new Separator());
+            bottomControls.getChildren().add(insertIndex + 1, zoomInBtn);
+            bottomControls.getChildren().add(insertIndex + 2, zoomOutBtn);
+            bottomControls.getChildren().add(insertIndex + 3, fitWidthBtn);
+            bottomControls.getChildren().add(insertIndex + 4, fitHeightBtn);
+            bottomControls.getChildren().add(insertIndex + 5, rotateBtn);
+        }
     }
     
     /**
@@ -160,13 +248,15 @@ public class UIControlsFactory {
     public Button getAutoScrollButton() { return autoScrollBtn; }
     public Button getNightModeButton() { return nightModeBtn; }
     public Button getEyeCareButton() { return eyeCareBtn; }
+    public HBox getTopControls() { return topControls; }
+    public HBox getBottomControls() { return bottomControls; }
     
     // 實作功能方法
     private void showSearchDialog(MainController controller) {
         if (!controller.getStateManager().isTextMode() || 
             controller.getStateManager().getCurrentTextPages() == null || 
             controller.getStateManager().getCurrentTextPages().isEmpty()) {
-            AlertHelper.showError("提示", "請先切換到文字模式");
+            AlertHelper.showError("提示", "搜尋功能僅在文字模式下可用");
             return;
         }
 
@@ -184,38 +274,49 @@ public class UIControlsFactory {
     }
     
     private void zoomIn(MainController controller) {
-        if (!controller.getStateManager().isTextMode()) {
-            controller.getImageViewer().zoomIn();
+        if (controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "圖片縮放功能僅在圖片模式下可用");
+            return;
         }
+        controller.getImageViewer().zoomIn();
     }
     
     private void zoomOut(MainController controller) {
-        if (!controller.getStateManager().isTextMode()) {
-            controller.getImageViewer().zoomOut();
+        if (controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "圖片縮放功能僅在圖片模式下可用");
+            return;
         }
+        controller.getImageViewer().zoomOut();
     }
     
     private void fitWidth(MainController controller) {
-        if (!controller.getStateManager().isTextMode()) {
-            controller.getImageViewer().fitToWidth();
+        if (controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "圖片適配功能僅在圖片模式下可用");
+            return;
         }
+        controller.getImageViewer().fitToWidth();
     }
     
     private void fitHeight(MainController controller) {
-        if (!controller.getStateManager().isTextMode()) {
-            controller.getImageViewer().fitToHeight();
+        if (controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "圖片適配功能僅在圖片模式下可用");
+            return;
         }
+        controller.getImageViewer().fitToHeight();
     }
     
     private void rotateImage(MainController controller) {
-        if (!controller.getStateManager().isTextMode()) {
-            controller.getImageViewer().getImageView().setRotate(
-                controller.getImageViewer().getImageView().getRotate() + 90);
+        if (controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "圖片旋轉功能僅在圖片模式下可用");
+            return;
         }
+        controller.getImageViewer().getImageView().setRotate(
+            controller.getImageViewer().getImageView().getRotate() + 90);
     }
     
     private void adjustFontSize(MainController controller, double delta) {
         if (!controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "字體調整功能僅在文字模式下可用");
             return;
         }
 
@@ -227,6 +328,7 @@ public class UIControlsFactory {
 
     private void showLineSpacingDialog(MainController controller) {
         if (!controller.getStateManager().isTextMode()) {
+            AlertHelper.showError("提示", "行距調整功能僅在文字模式下可用");
             return;
         }
 

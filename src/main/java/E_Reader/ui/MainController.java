@@ -141,6 +141,14 @@ public class MainController {
         StackPane.setAlignment(readingTimeLabel, Pos.TOP_RIGHT);
         StackPane.setMargin(readingTimeLabel, new Insets(20, 20, 0, 0));
         centerPane.getChildren().add(readingTimeLabel);
+        
+        // 頁碼標籤 - 放在右下角
+        pageLabel = new Label("頁面: 0 / 0");
+        pageLabel.setStyle("-fx-text-fill: white; -fx-background-color: rgba(0,0,0,0.7); " +
+                "-fx-padding: 5 10 5 10; -fx-background-radius: 15; -fx-font-size: 14px;");
+        StackPane.setAlignment(pageLabel, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(pageLabel, new Insets(0, 20, 20, 0));
+        centerPane.getChildren().add(pageLabel);
 
         centerPane.setStyle("-fx-background-color: #1e1e1e;");
         return centerPane;
@@ -156,8 +164,10 @@ public class MainController {
         autoScrollBtn = controlsFactory.getAutoScrollButton();
         nightModeBtn = controlsFactory.getNightModeButton();
         eyeCareBtn = controlsFactory.getEyeCareButton();
-        pageLabel = controlsFactory.getPageLabel();
         pageField = controlsFactory.getPageField();
+        
+        // 初始化時更新按鈕顯示（預設為圖片模式）
+        controlsFactory.updateControlsForMode(false);
     }
 
     private void setupEventHandlers() {
@@ -415,7 +425,8 @@ public class MainController {
                         centerPane.getChildren().addAll(
                                 textRenderer.getMainContainer(),
                                 readingProgressBar,
-                                readingTimeLabel
+                                readingTimeLabel,
+                                pageLabel
                         );
 
                         textRenderer.setPages(textPages);
@@ -449,7 +460,8 @@ public class MainController {
         centerPane.getChildren().addAll(
                 imageViewer.getScrollPane(),
                 readingProgressBar,
-                readingTimeLabel
+                readingTimeLabel,
+                pageLabel
         );
         updateUI();
     }
@@ -527,6 +539,10 @@ public class MainController {
     }
 
     private void updateControlsForMode() {
+        // 更新 UI 控制按鈕的顯示
+        controlsFactory.updateControlsForMode(stateManager.isTextMode());
+        
+        // 更新頁碼顯示
         if (stateManager.isTextMode() && stateManager.getCurrentTextPages() != null) {
             pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + stateManager.getCurrentTextPages().size());
         } else if (!stateManager.isTextMode() && imageViewer.hasImages()) {
