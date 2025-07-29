@@ -14,9 +14,8 @@ public class FileManagerTest extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
-            // 創建檔案管理器控制器a
-            FileManagerController fileManager = new FileManagerController(primaryStage);
-            //a
+            // 創建檔案管理器控制器
+            FileManagerController fileManager = FileManagerController.getInstance();
             // 初始化並設定檔案開啟回調
             fileManager.initialize(this::handleFileOpen);
             

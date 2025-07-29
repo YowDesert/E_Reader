@@ -75,7 +75,8 @@ public class MainController {
         this.textExtractor = new TextExtractor();
         this.bookmarkManager = new BookmarkManager();
         this.settingsManager = new SettingsManager();
-        this.fileManagerController = new FileManagerController(new Stage());
+        // 修正：使用單一 Stage 實例來避免重複創建
+        this.fileManagerController = FileManagerController.getInstance();
 
         // 初始化管理器
         this.stateManager = new StateManager();
@@ -271,6 +272,7 @@ public class MainController {
      * 開啟檔案管理器
      */
     public void showFileManager() {
+        // 修正：直接顯示檔案管理器，不重複創建
         fileManagerController.show();
     }
     
