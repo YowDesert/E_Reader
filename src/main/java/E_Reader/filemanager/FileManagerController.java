@@ -123,10 +123,7 @@ public class FileManagerController {
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0;");
 
-        // 匯入按鈕
-        Button importBtn = new Button("📁 匯入檔案");
-        importBtn.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
-        importBtn.setOnAction(e -> showImportDialog());
+        // 匯入按鈕已移除 - 進入檔案管理器後不需要再使用匯入功能
 
         // 新增資料夾按鈕
         Button newFolderBtn = new Button("📂 新增資料夾");
@@ -159,7 +156,7 @@ public class FileManagerController {
         gridViewBtn.setSelected(true);
 
         toolbar.getChildren().addAll(
-                importBtn, newFolderBtn, refreshBtn,
+                newFolderBtn, refreshBtn,
                 new Separator(), searchField, sortComboBox,
                 new Separator(), gridViewBtn, listViewBtn
         );

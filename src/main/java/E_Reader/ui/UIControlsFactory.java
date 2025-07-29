@@ -59,8 +59,9 @@ public class UIControlsFactory {
             controller.showFileManager();
             controller.getPrimaryStage().hide(); // 隱藏閱讀器視窗
         });
-        Button openFolderBtn = createButton("📂 圖片資料夾", controller::openImageFolder);
-        Button openPdfBtn = createButton("📄 PDF檔案", controller::openPdfFile);
+        // 已移除 PDF匯入 和 圖片資料夾匯入 按鈕 - 進入檔案後不需要再使用檔案匯入功能
+        // Button openFolderBtn = createButton("📂 圖片資料夾", controller::openImageFolder);
+        // Button openPdfBtn = createButton("📄 PDF檔案", controller::openPdfFile);
         Button bookmarkBtn = createButton("🔖 書籤管理", controller::showBookmarkDialog);
         Button settingsBtn = createButton("⚙️ 設定", controller::showSettingsDialog);
         Button fullscreenBtn = createButton("🔲 全螢幕", controller::toggleFullscreen);
@@ -83,7 +84,7 @@ public class UIControlsFactory {
         
         // 基本按鈕始終顯示
         topControls.getChildren().addAll(
-            returnToManagerBtn, fileManagerBtn, openFolderBtn, openPdfBtn, 
+            returnToManagerBtn, fileManagerBtn, 
             bookmarkBtn, settingsBtn, textModeBtn, autoScrollBtn, 
             nightModeBtn, eyeCareBtn, fullscreenBtn, exitBtn
         );
