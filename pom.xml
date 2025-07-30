@@ -216,7 +216,7 @@
                 <artifactId>jpackage-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <n>E-Reader</n>
+<!--                    <n>E-Reader</n>-->
                     <appVersion>${project.version}</appVersion>
                     <vendor>E-Reader Team</vendor>
                     <destination>${project.build.directory}/installer</destination>

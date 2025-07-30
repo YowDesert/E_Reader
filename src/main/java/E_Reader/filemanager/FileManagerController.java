@@ -63,15 +63,30 @@ public class FileManagerController {
 
     public FileManagerController() {
         this.primaryStage = new Stage();
-        this.libraryPath = Paths.get(System.getProperty("user.home"), "E_Reader_Library");
-        this.fileManagerData = new FileManagerData(libraryPath);
-
-        // 確保庫目錄存在
+        
+        // 嘗試在用戶主目錄創建，如果失敗則在程式目錄創建
+        Path userHomeLibrary = Paths.get(System.getProperty("user.home"), "E_Reader_Library");
+        Path currentDirLibrary = Paths.get("E_Reader_Library");
+        
+        Path chosenPath = null;
         try {
-            Files.createDirectories(libraryPath);
+            Files.createDirectories(userHomeLibrary);
+            chosenPath = userHomeLibrary;
+            System.out.println("Using library path: " + userHomeLibrary.toString());
         } catch (IOException e) {
-            System.err.println("無法創建檔案庫目錄: " + e.getMessage());
+            System.err.println("無法在用戶主目錄創建檔案庫: " + e.getMessage());
+            try {
+                Files.createDirectories(currentDirLibrary);
+                chosenPath = currentDirLibrary;
+                System.out.println("Using fallback library path: " + currentDirLibrary.toAbsolutePath().toString());
+            } catch (IOException e2) {
+                System.err.println("無法創建檔案庫目錄: " + e2.getMessage());
+                chosenPath = currentDirLibrary; // 使用預設路徑
+            }
         }
+        
+        this.libraryPath = chosenPath;
+        this.fileManagerData = new FileManagerData(libraryPath);
     }
     
     public static FileManagerController getInstance() {
@@ -85,7 +100,40 @@ public class FileManagerController {
         this.fileOpenCallback = callback;
         setupMainLayout();
         setupEventHandlers();
+        
+        // 創建測試資料夾
+        createTestFoldersIfNeeded();
+        
         loadCurrentFolder();
+    }
+    
+    private void createTestFoldersIfNeeded() {
+        try {
+            // 創建一些基本資料夾來測試
+            if (fileManagerData.getFolders("root").isEmpty()) {
+                System.out.println("Creating test folders...");
+                
+                // 創建 PDF文件資料夾
+                if (fileManagerData.createFolder("PDF文件", "root")) {
+                    System.out.println("Created PDF文件 folder");
+                }
+                
+                // 創建圖片資料夾
+                if (fileManagerData.createFolder("圖片", "root")) {
+                    System.out.println("Created 圖片 folder");
+                }
+                
+                // 創建測試資料夾
+                if (fileManagerData.createFolder("測試資料夾", "root")) {
+                    System.out.println("Created 測試資料夾 folder");
+                }
+                
+                System.out.println("Test folders created");
+            }
+        } catch (Exception e) {
+            System.err.println("Error creating test folders: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void setupMainLayout() {
@@ -135,7 +183,17 @@ public class FileManagerController {
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0;");
 
-        // 匯入按鈕已移除 - 進入檔案管理器後不需要再使用匯入功能
+        // 匯入PDF按鈕
+        Button importPdfBtn = new Button("📄 匯入PDF");
+        importPdfBtn.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
+        importPdfBtn.setOnAction(e -> showImportPdfDialog());
+        importPdfBtn.setTooltip(new Tooltip("選擇PDF檔案並匯入到PDF文件資料夾"));
+
+        // 匯入圖片按鈕
+        Button importImageBtn = new Button("🖼️ 匯入圖片");
+        importImageBtn.setStyle("-fx-background-color: #fd7e14; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
+        importImageBtn.setOnAction(e -> showImportImageDialog());
+        importImageBtn.setTooltip(new Tooltip("選擇圖片檔案並匯入到圖片資料夾"));
 
         // 新增資料夾按鈕
         Button newFolderBtn = new Button("📂 新增資料夾");
@@ -178,7 +236,8 @@ public class FileManagerController {
         });
 
         toolbar.getChildren().addAll(
-                newFolderBtn, refreshBtn,
+                importPdfBtn, importImageBtn,
+                new Separator(), newFolderBtn, refreshBtn,
                 new Separator(), searchField, sortComboBox,
                 new Separator(), gridViewBtn, listViewBtn
         );
@@ -196,92 +255,171 @@ public class FileManagerController {
         TreeView<FolderTreeItem> treeView = new TreeView<>();
         TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
 
-        if (!fileManagerData.getSubFolders("root").isEmpty()) {
-            rootItem.getChildren().add(new TreeItem<>(
-                    new FolderTreeItem("載入中...", "loading")
-            ));
-        }
-        // 創建根節點
-//        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
         rootItem.setExpanded(true);
         treeView.setRoot(rootItem);
         treeView.setShowRoot(true);
 
         // 設定樣式
         treeView.setStyle("-fx-background-color: #f5f5f5;");
-        
-        // 點擊事件
+
+        // 設定CellFactory僅處理顯示
+        treeView.setCellFactory(tv -> {
+            TreeCell<FolderTreeItem> cell = new TreeCell<>() {
+                @Override
+                protected void updateItem(FolderTreeItem item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.getName());
+                }
+            };
+            return cell;
+        });
+
+        // 合併的滑鼠點擊事件處理
         treeView.setOnMouseClicked(e -> {
             TreeItem<FolderTreeItem> selectedItem = treeView.getSelectionModel().getSelectedItem();
             if (selectedItem != null && e.getClickCount() == 1) {
                 String folderId = selectedItem.getValue().getId();
-                navigateToFolder(folderId);
-            }
-        });
-        
-        // 展開事件：懶惰載入子資料夾
-        treeView.addEventHandler(TreeItem.branchExpandedEvent(), event -> {
-            TreeItem<?> item = event.getTreeItem();
-            if (item != null && item.getValue() instanceof FolderTreeItem folderTreeItem) {
-                TreeItem<FolderTreeItem> expandedItem = (TreeItem<FolderTreeItem>) item;
-
-                // ✅ 只在第一次展開時載入子項目（避免重複載入）
-                if (expandedItem.getChildren().size() == 1 && expandedItem.getChildren().get(0).getValue() == null) {
-                    expandedItem.getChildren().clear(); // 移除 dummy
-                    loadChildFolders(expandedItem);
+                if (!"loading".equals(folderId)) {
+                    navigateToFolder(folderId);
+                }
+                
+                // 檢查是否需要載入子節點（懶惰載入）
+                if (selectedItem.isExpanded() && 
+                    (selectedItem.getChildren().isEmpty() ||
+                     (selectedItem.getChildren().size() == 1 && 
+                      selectedItem.getChildren().get(0).getValue() != null &&
+                      "loading".equals(selectedItem.getChildren().get(0).getValue().getId())))) {
+                    loadChildFoldersLazily(selectedItem);
                 }
             }
         });
-
-
-
-        // 初始載入根目錄的子資料夾
-        loadChildFolders(rootItem);
         
+        // 監聽樹項目展開事件
+        rootItem.expandedProperty().addListener((obs, wasExpanded, isExpanded) -> {
+            if (isExpanded && rootItem.getChildren().isEmpty()) {
+                loadChildFolders(rootItem);
+            }
+        });
+
         return treeView;
     }
 
+
+
     private void loadChildFolders(TreeItem<FolderTreeItem> parentItem) {
+        if (parentItem == null || parentItem.getValue() == null) {
+            return;
+        }
+        
         FolderTreeItem parentValue = parentItem.getValue();
         String parentId = parentValue.getId();
-        System.out.println("展開節點: " + parentValue.getName());
+        
+        // 清除現有子項目（如果有的話）
+        parentItem.getChildren().clear();
+        
+        try {
+            List<FolderItem> subFolders = fileManagerData.getSubFolders(parentId);
+            System.out.println("Loading folders for parent: " + parentId + ", found: " + subFolders.size() + " folders");
+            
+            for (FolderItem folder : subFolders) {
+                TreeItem<FolderTreeItem> childItem = new TreeItem<>(
+                        new FolderTreeItem("📁 " + folder.getName(), folder.getId())
+                );
 
-        // ✅ 檢查 placeholder ("loading")，並移除
-        if (!parentItem.getChildren().isEmpty()) {
-            TreeItem<FolderTreeItem> firstChild = parentItem.getChildren().get(0);
-            FolderTreeItem firstValue = firstChild.getValue();
-            if (firstValue != null && "loading".equals(firstValue.getId())) {
-                System.out.println("移除 placeholder");
-                parentItem.getChildren().clear();
-            } else {
-                System.out.println("已經載入過子節點，跳過");
-                return;
+                // 檢查是否有子資料夾，如果有則加 placeholder
+                List<FolderItem> grandChildren = fileManagerData.getSubFolders(folder.getId());
+                if (!grandChildren.isEmpty()) {
+                    childItem.getChildren().add(new TreeItem<>(
+                            new FolderTreeItem("載入中...", "loading")
+                    ));
+                }
+
+                // 為每個子項目添加展開監聽器
+                addExpandListener(childItem);
+                
+                parentItem.getChildren().add(childItem);
+                System.out.println("Added folder: " + folder.getName() + " with ID: " + folder.getId());
+            }
+            
+            System.out.println("Folder panel refreshed. Root has " + parentItem.getChildren().size() + " children");
+        } catch (Exception e) {
+            System.err.println("Error loading child folders: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void addExpandListener(TreeItem<FolderTreeItem> item) {
+        item.expandedProperty().addListener((obs, wasExpanded, isExpanded) -> {
+            if (isExpanded && 
+                (item.getChildren().isEmpty() ||
+                 (item.getChildren().size() == 1 && 
+                  item.getChildren().get(0).getValue() != null &&
+                  "loading".equals(item.getChildren().get(0).getValue().getId())))) {
+                loadChildFoldersLazily(item);
+            }
+        });
+    }
+    
+    private void loadChildFoldersLazily(TreeItem<FolderTreeItem> parentItem) {
+        if (parentItem == null || parentItem.getValue() == null) return;
+        
+        String parentId = parentItem.getValue().getId();
+        System.out.println("Loading child folders for: " + parentId);
+        
+        // 檢查是否已經載入過（避免重複載入）
+        boolean hasLoadingNode = false;
+        boolean hasRealChildren = false;
+        
+        for (TreeItem<FolderTreeItem> child : parentItem.getChildren()) {
+            if (child.getValue() != null) {
+                if ("loading".equals(child.getValue().getId())) {
+                    hasLoadingNode = true;
+                } else {
+                    hasRealChildren = true;
+                }
             }
         }
-
-        List<FolderItem> subFolders = fileManagerData.getSubFolders(parentId);
-        System.out.println("子資料夾數量: " + subFolders.size());
-
-        for (FolderItem folder : subFolders) {
-            TreeItem<FolderTreeItem> childItem = new TreeItem<>(
-                    new FolderTreeItem("📁 " + folder.getName(), folder.getId())
-            );
-
-            // 如果還有子資料夾，加 placeholder
-            if (!fileManagerData.getSubFolders(folder.getId()).isEmpty()) {
-                childItem.getChildren().add(new TreeItem<>(
-                        new FolderTreeItem("載入中...", "loading")
-                ));
+        
+        // 如果已經有真實的子項目，就不需要再載入
+        if (hasRealChildren) {
+            System.out.println("Already has real children, skipping load for: " + parentId);
+            return;
+        }
+        
+        // 移除載入中節點
+        if (hasLoadingNode) {
+            parentItem.getChildren().removeIf(child -> 
+                child.getValue() != null && "loading".equals(child.getValue().getId()));
+        }
+        
+        try {
+            List<FolderItem> subFolders = fileManagerData.getSubFolders(parentId);
+            System.out.println("Found " + subFolders.size() + " subfolders for: " + parentId);
+            
+            for (FolderItem folder : subFolders) {
+                TreeItem<FolderTreeItem> childItem =
+                        new TreeItem<>(new FolderTreeItem("📁 " + folder.getName(), folder.getId()));
+                
+                // 檢查是否有子資料夾，如果有則加入載入中節點
+                List<FolderItem> grandChildren = fileManagerData.getSubFolders(folder.getId());
+                if (!grandChildren.isEmpty()) {
+                    childItem.getChildren().add(new TreeItem<>(new FolderTreeItem("載入中...", "loading")));
+                }
+                
+                // 為新節點添加展開監聽器
+                addExpandListener(childItem);
+                
+                parentItem.getChildren().add(childItem);
+                System.out.println("Added child folder: " + folder.getName());
             }
-
-            parentItem.getChildren().add(childItem);
+        } catch (Exception e) {
+            System.err.println("Error loading child folders for " + parentId + ": " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
 
 
-
-    // 移除舊的createFolderTreeItem方法，改用TreeView
 
     private void setupEventHandlers() {
         // 拖拽支持（簡化版本）
@@ -625,16 +763,27 @@ public class FileManagerController {
     }
 
     private void refreshFolderPanel() {
-        // 重新創建樹狀結構
-        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
-        rootItem.setExpanded(true);
-        folderTreeView.setRoot(rootItem);
-        
-        // 載入子資料夾
-        loadChildFolders(rootItem);
-        
-        // 選擇當前資料夾
-        selectCurrentFolderInTree(rootItem, currentFolderId);
+        Platform.runLater(() -> {
+            try {
+                System.out.println("Refreshing folder panel...");
+                
+                // 重新創建樹狀結構
+                TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📚 我的資料庫", "root"));
+                rootItem.setExpanded(true);
+                folderTreeView.setRoot(rootItem);
+                
+                // 載入子資料夾
+                loadChildFolders(rootItem);
+                
+                // 選擇當前資料夾
+                selectCurrentFolderInTree(rootItem, currentFolderId);
+                
+                System.out.println("Folder panel refreshed. Root has " + rootItem.getChildren().size() + " children");
+            } catch (Exception e) {
+                System.err.println("更新資料夾面板時發生錯誤: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
     }
     
     private boolean selectCurrentFolderInTree(TreeItem<FolderTreeItem> item, String targetFolderId) {
@@ -655,6 +804,244 @@ public class FileManagerController {
     // 移除舊的buildFolderTree方法，改用TreeView的懶惰載入
 
     // 對話框和功能方法
+    private void showImportPdfDialog() {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("選擇要匯入的PDF檔案");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("PDF 檔案", "*.pdf"),
+                    new FileChooser.ExtensionFilter("所有檔案", "*.*")
+            );
+            
+            // 設定初始目錄
+            String userHome = System.getProperty("user.home");
+            File initialDir = new File(userHome, "Desktop");
+            if (!initialDir.exists()) {
+                initialDir = new File(userHome);
+            }
+            fileChooser.setInitialDirectory(initialDir);
+
+            List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
+            if (selectedFiles != null && !selectedFiles.isEmpty()) {
+                // 顯示確認對話框
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("確認匯入");
+                confirmAlert.setHeaderText("確認匯入PDF檔案");
+                confirmAlert.setContentText("將匯入 " + selectedFiles.size() + " 個PDF檔案到 'PDF文件' 資料夾。\n\n這會複製檔案到您的資料庫中。");
+                
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    importFilesToSpecialFolder(selectedFiles, "pdf");
+                }
+            }
+        } catch (Exception e) {
+            showError("匯入錯誤", "開啟檔案選擇器時發生錯誤: " + e.getMessage());
+        }
+    }
+    
+    private void importFilesToSpecialFolder(List<File> selectedFiles, String folderType) {
+        String targetFolderId = ensureSpecialFolderExists(folderType);
+        if (targetFolderId != null) {
+            importFilesToFolder(selectedFiles, targetFolderId, folderType);
+        } else {
+            showError("建立資料夾失敗", "無法建立" + folderType + "資料夾");
+        }
+    }
+    
+    private String ensureSpecialFolderExists(String folderType) {
+        String folderName;
+        switch (folderType.toLowerCase()) {
+            case "pdf":
+                folderName = "PDF文件";
+                break;
+            case "images":
+                folderName = "圖片";
+                break;
+            default:
+                return null;
+        }
+        
+        // 檢查資料夾是否已存在
+        List<FolderItem> rootFolders = fileManagerData.getFolders("root");
+        for (FolderItem folder : rootFolders) {
+            if (folder.getName().equals(folderName)) {
+                return folder.getId();
+            }
+        }
+        
+        // 如果不存在，則建立
+        if (fileManagerData.createFolder(folderName, "root")) {
+            // 重新獲取資料夾列表找到新建的資料夾
+            List<FolderItem> updatedFolders = fileManagerData.getFolders("root");
+            for (FolderItem folder : updatedFolders) {
+                if (folder.getName().equals(folderName)) {
+                    return folder.getId();
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    private void importFilesToFolder(List<File> files, String targetFolderId, String fileType) {
+        String folderName = "pdf".equals(fileType) ? "PDF文件" : "圖片";
+        statusLabel.setText("正在導入檔案到 " + folderName + " 資料夾...");
+        showImportProgress();
+
+        Thread importThread = new Thread(() -> {
+            int successCount = 0;
+            int totalFiles = files.size();
+            int skippedCount = 0;
+            int errorCount = 0;
+            List<String> errorMessages = new ArrayList<>();
+
+            for (int i = 0; i < files.size(); i++) {
+                File file = files.get(i);
+                
+                // 更新狀態顯示
+                final String currentFileName = file.getName();
+                final int currentIndex = i + 1;
+                Platform.runLater(() -> statusLabel.setText("正在處理: " + currentFileName + " (" + currentIndex + "/" + totalFiles + ")"));
+                
+                // 檢查檔案類型
+                if (!isValidFileType(file, fileType)) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                try {
+                    if (fileManagerData.importFile(file, targetFolderId)) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        errorMessages.add("無法匯入: " + file.getName());
+                    }
+                } catch (Exception e) {
+                    errorCount++;
+                    String errorMsg = "匯入 " + file.getName() + " 失敗: " + e.getMessage();
+                    errorMessages.add(errorMsg);
+                    System.err.println(errorMsg);
+                }
+
+                // 更新進度
+                final double progress = (double) (i + 1) / totalFiles;
+                Platform.runLater(() -> updateImportProgress(progress));
+            }
+
+            final int finalSuccessCount = successCount;
+            final int finalSkippedCount = skippedCount;
+            final int finalErrorCount = errorCount;
+            final List<String> finalErrorMessages = new ArrayList<>(errorMessages);
+            
+            Platform.runLater(() -> {
+                hideImportProgress();
+                loadCurrentFolder();
+                
+                // 構建結果訊息
+                StringBuilder resultMessage = new StringBuilder();
+                resultMessage.append("成功導入 ").append(finalSuccessCount).append(" 個檔案到 ").append(folderName).append(" 資料夾");
+                
+                if (finalSkippedCount > 0) {
+                    resultMessage.append("，跳過 ").append(finalSkippedCount).append(" 個不支援的檔案");
+                }
+                
+                if (finalErrorCount > 0) {
+                    resultMessage.append("，").append(finalErrorCount).append(" 個檔案匯入失敗");
+                }
+                
+                statusLabel.setText(resultMessage.toString());
+
+                // 顯示詳細結果對話框
+                if (finalSuccessCount > 0 || finalErrorCount > 0) {
+                    Alert alert;
+                    if (finalErrorCount == 0) {
+                        alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("匯入完成");
+                    } else {
+                        alert = new Alert(Alert.AlertType.WARNING);
+                        alert.setTitle("匯入完成（有錯誤）");
+                    }
+                    
+                    alert.setHeaderText(resultMessage.toString());
+                    
+                    if (finalErrorCount > 0 && !finalErrorMessages.isEmpty()) {
+                        StringBuilder errorDetails = new StringBuilder("錯誤詳情：\n");
+                        for (int i = 0; i < Math.min(5, finalErrorMessages.size()); i++) {
+                            errorDetails.append("• ").append(finalErrorMessages.get(i)).append("\n");
+                        }
+                        if (finalErrorMessages.size() > 5) {
+                            errorDetails.append("...還有 ").append(finalErrorMessages.size() - 5).append(" 個錯誤");
+                        }
+                        alert.setContentText(errorDetails.toString());
+                    } else {
+                        alert.setContentText("所有檔案已成功匯入到您的資料庫中。");
+                    }
+                    
+                    alert.showAndWait();
+                }
+            });
+        });
+
+        importThread.setDaemon(true);
+        importThread.start();
+    }
+    
+    private boolean isValidFileType(File file, String fileType) {
+        String fileName = file.getName().toLowerCase();
+        
+        switch (fileType.toLowerCase()) {
+            case "pdf":
+                return fileName.endsWith(".pdf");
+            case "images":
+                return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
+                       fileName.endsWith(".png") || fileName.endsWith(".gif") || 
+                       fileName.endsWith(".bmp") || fileName.endsWith(".tiff") ||
+                       fileName.endsWith(".webp");
+            default:
+                return true;
+        }
+    }
+    
+    private void showImportImageDialog() {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("選擇要匯入的圖片檔案");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("圖片檔案", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tiff", "*.webp"),
+                    new FileChooser.ExtensionFilter("JPEG 圖片", "*.jpg", "*.jpeg"),
+                    new FileChooser.ExtensionFilter("PNG 圖片", "*.png"),
+                    new FileChooser.ExtensionFilter("所有檔案", "*.*")
+            );
+            
+            // 設定初始目錄
+            String userHome = System.getProperty("user.home");
+            File initialDir = new File(userHome, "Pictures"); // 圖片目錄
+            if (!initialDir.exists()) {
+                initialDir = new File(userHome, "Desktop");
+                if (!initialDir.exists()) {
+                    initialDir = new File(userHome);
+                }
+            }
+            fileChooser.setInitialDirectory(initialDir);
+
+            List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
+            if (selectedFiles != null && !selectedFiles.isEmpty()) {
+                // 顯示確認對話框
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("確認匯入");
+                confirmAlert.setHeaderText("確認匯入圖片檔案");
+                confirmAlert.setContentText("將匯入 " + selectedFiles.size() + " 個圖片檔案到 '圖片' 資料夾。\n\n這會複製檔案到您的資料庫中。");
+                
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    importFilesToSpecialFolder(selectedFiles, "images");
+                }
+            }
+        } catch (Exception e) {
+            showError("匯入錯誤", "開啟檔案選擇器時發生錯誤: " + e.getMessage());
+        }
+    }
+    
     private void showImportDialog() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("選擇要匯入的檔案");
@@ -674,20 +1061,23 @@ public class FileManagerController {
     private void showImportProgress() {
         if (importProgressBar == null) {
             importProgressBar = new ProgressBar(0);
-            importProgressBar.setPrefWidth(300);
+            importProgressBar.setPrefWidth(400);
             importProgressBar.setStyle("-fx-accent: #007ACC;");
 
             Label progressLabel = new Label("正在匯入檔案...");
-            progressLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
+            progressLabel.setStyle("-fx-text-fill: #333; -fx-font-size: 14px; -fx-font-weight: bold;");
+            
+            Label detailLabel = new Label("請稍候...");
+            detailLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
 
-            VBox progressBox = new VBox(5);
+            VBox progressBox = new VBox(10);
             progressBox.setAlignment(Pos.CENTER);
-            progressBox.getChildren().addAll(progressLabel, importProgressBar);
-            progressBox.setPadding(new Insets(10));
-            progressBox.setStyle("-fx-background-color: rgba(255,255,255,0.9); -fx-background-radius: 5;");
+            progressBox.getChildren().addAll(progressLabel, importProgressBar, detailLabel);
+            progressBox.setPadding(new Insets(20));
+            progressBox.setStyle("-fx-background-color: rgba(255,255,255,0.95); -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 5);");
 
             StackPane overlay = new StackPane(progressBox);
-            overlay.setStyle("-fx-background-color: rgba(0,0,0,0.3);");
+            overlay.setStyle("-fx-background-color: rgba(0,0,0,0.4);");
 
             mainLayout.setCenter(overlay);
         }
@@ -882,8 +1272,16 @@ public class FileManagerController {
 
         // 創建資料夾樹
         TreeView<FolderTreeItem> treeView = new TreeView<>();
-        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("我的資料庫", "root"));
+        TreeItem<FolderTreeItem> rootItem = new TreeItem<>(new FolderTreeItem("📁 根資料夾", "rootId"));
         rootItem.setExpanded(true);
+
+// 檢查是否有子資料夾就放載入中
+        if (!fileManagerData.getSubFolders("rootId").isEmpty()) {
+            rootItem.getChildren().add(new TreeItem<>(new FolderTreeItem("載入中...", "loading")));
+        }
+
+        treeView.setRoot(rootItem);
+
         treeView.setRoot(rootItem);
 
         buildFolderTreeForDialog(rootItem, "root");
