@@ -39,9 +39,18 @@ public class FileManagerData {
     
     private void loadExistingData() {
         try {
+            System.out.println("Starting to load existing data from: " + libraryPath.toString());
             scanDirectory(libraryPath.toFile(), "root");
+            System.out.println("Loaded " + folders.size() + " folders and " + files.size() + " files");
+            
+            // 打印所有資料夾結構
+            System.out.println("Folder structure:");
+            for (FolderItem folder : folders.values()) {
+                System.out.println("  Folder: " + folder.getName() + " (ID: " + folder.getId() + ", Parent: " + folder.getParentId() + ")");
+            }
         } catch (Exception e) {
             System.err.println("載入資料時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     
