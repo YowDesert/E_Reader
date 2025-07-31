@@ -12,6 +12,7 @@ public class StateManager {
     
     // 文件狀態
     private boolean isPdfMode = false;
+    private boolean isEpubMode = false;
     private boolean isTextMode = false;
     private String currentFilePath = "";
     
@@ -33,11 +34,12 @@ public class StateManager {
     }
     
     // 文件狀態管理
-    public void setFileLoaded(String filePath, boolean isPdf, boolean isText, 
+    public void setFileLoaded(String filePath, boolean isPdf, boolean isEpub, 
                              List<Image> images, List<TextExtractor.PageText> textPages) {
         this.currentFilePath = filePath;
         this.isPdfMode = isPdf;
-        this.isTextMode = isText;
+        this.isEpubMode = isEpub;
+        this.isTextMode = false; // 初始為圖片模式
         this.currentImages = images;
         this.currentTextPages = textPages;
     }
@@ -45,6 +47,7 @@ public class StateManager {
     public void clearFileState() {
         this.currentFilePath = "";
         this.isPdfMode = false;
+        this.isEpubMode = false;
         this.isTextMode = false;
         this.currentImages = null;
         this.currentTextPages = null;
@@ -67,6 +70,14 @@ public class StateManager {
     
     public void setPdfMode(boolean pdfMode) {
         isPdfMode = pdfMode;
+    }
+    
+    public boolean isEpubMode() {
+        return isEpubMode;
+    }
+    
+    public void setEpubMode(boolean epubMode) {
+        isEpubMode = epubMode;
     }
     
     public boolean isTextMode() {

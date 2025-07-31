@@ -121,6 +121,11 @@ public class FileManagerController {
                     System.out.println("Created PDF文件 folder");
                 }
 
+                // 創建 EPUB電子書資料夾
+                if (fileManagerData.createFolder("電子書", "root")) {
+                    System.out.println("Created 電子書 folder");
+                }
+
                 // 創建圖片資料夾
                 if (fileManagerData.createFolder("圖片", "root")) {
                     System.out.println("Created 圖片 folder");
@@ -192,6 +197,12 @@ public class FileManagerController {
         importPdfBtn.setOnAction(e -> showImportPdfDialog());
         importPdfBtn.setTooltip(new Tooltip("選擇PDF檔案並匯入到PDF文件資料夾"));
 
+        // 匯入EPUB按鈕
+        Button importEpubBtn = new Button("📚 匯入EPUB");
+        importEpubBtn.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
+        importEpubBtn.setOnAction(e -> showImportEpubDialog());
+        importEpubBtn.setTooltip(new Tooltip("選擇EPUB檔案並匯入到電子書資料夾"));
+
         // 匯入圖片按鈕
         Button importImageBtn = new Button("🖼️ 匯入圖片");
         importImageBtn.setStyle("-fx-background-color: #fd7e14; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
@@ -239,7 +250,7 @@ public class FileManagerController {
         });
 
         toolbar.getChildren().addAll(
-                importPdfBtn, importImageBtn,
+                importPdfBtn, importEpubBtn, importImageBtn,
                 new Separator(), newFolderBtn, refreshBtn,
                 new Separator(), searchField, sortComboBox,
                 new Separator(), gridViewBtn, listViewBtn
@@ -753,6 +764,7 @@ public class FileManagerController {
     private String getFileIcon(String extension) {
         switch (extension.toLowerCase()) {
             case "pdf": return "📄";
+            case "epub": return "📚";
             case "jpg":
             case "jpeg":
             case "png":
@@ -913,6 +925,9 @@ public class FileManagerController {
             case "pdf":
                 folderName = "PDF文件";
                 break;
+            case "epub":
+                folderName = "電子書";
+                break;
             case "images":
                 folderName = "圖片";
                 break;
@@ -943,7 +958,21 @@ public class FileManagerController {
     }
 
     private void importFilesToFolder(List<File> files, String targetFolderId, String fileType) {
-        String folderName = "pdf".equals(fileType) ? "PDF文件" : "圖片";
+        String folderName;
+        switch (fileType.toLowerCase()) {
+            case "pdf":
+                folderName = "PDF文件";
+                break;
+            case "epub":
+                folderName = "電子書";
+                break;
+            case "images":
+                folderName = "圖片";
+                break;
+            default:
+                folderName = "未知類型";
+                break;
+        }
         statusLabel.setText("正在導入檔案到 " + folderName + " 資料夾...");
         showImportProgress();
 
@@ -1051,6 +1080,8 @@ public class FileManagerController {
         switch (fileType.toLowerCase()) {
             case "pdf":
                 return fileName.endsWith(".pdf");
+            case "epub":
+                return fileName.endsWith(".epub");
             case "images":
                 return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
                         fileName.endsWith(".png") || fileName.endsWith(".gif") ||
@@ -1058,6 +1089,41 @@ public class FileManagerController {
                         fileName.endsWith(".webp");
             default:
                 return true;
+        }
+    }
+
+    private void showImportEpubDialog() {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("選擇要匯入的EPUB檔案");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("EPUB 檔案", "*.epub"),
+                    new FileChooser.ExtensionFilter("所有檔案", "*.*")
+            );
+
+            // 設定初始目錄
+            String userHome = System.getProperty("user.home");
+            File initialDir = new File(userHome, "Desktop");
+            if (!initialDir.exists()) {
+                initialDir = new File(userHome);
+            }
+            fileChooser.setInitialDirectory(initialDir);
+
+            List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
+            if (selectedFiles != null && !selectedFiles.isEmpty()) {
+                // 顯示確認對話框
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("確認匯入");
+                confirmAlert.setHeaderText("確認匯入EPUB檔案");
+                confirmAlert.setContentText("將匯入 " + selectedFiles.size() + " 個EPUB檔案到 '電子書' 資料夾。\n\n這會複製檔案到您的資料庫中。");
+
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    importFilesToSpecialFolder(selectedFiles, "epub");
+                }
+            }
+        } catch (Exception e) {
+            showError("匯入錯誤", "開啟檔案選擇器時發生錯誤: " + e.getMessage());
         }
     }
 
@@ -1105,8 +1171,9 @@ public class FileManagerController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("選擇要匯入的檔案");
         fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("支援的檔案", "*.pdf", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp"),
+                new FileChooser.ExtensionFilter("支援的檔案", "*.pdf", "*.epub", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp"),
                 new FileChooser.ExtensionFilter("PDF 檔案", "*.pdf"),
+                new FileChooser.ExtensionFilter("EPUB 檔案", "*.epub"),
                 new FileChooser.ExtensionFilter("圖片檔案", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp"),
                 new FileChooser.ExtensionFilter("所有檔案", "*.*")
         );
