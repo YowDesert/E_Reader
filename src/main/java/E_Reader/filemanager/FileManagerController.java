@@ -1827,12 +1827,90 @@ public class FileManagerController {
         if (fileOpenCallback != null) {
             File physicalFile = new File(file.getFilePath());
             if (physicalFile.exists()) {
-                fileOpenCallback.onFileOpen(physicalFile);
-                // 隱藏檔案管理器視窗，不關閉以便未來可以再次開啟
-                primaryStage.hide();
+                // 檢查是否為E_Reader支援的檔案格式
+                if (isSupportedByEReader(file)) {
+                    fileOpenCallback.onFileOpen(physicalFile);
+                    // 隱藏檔案管理器視窗，不關閉以便未來可以再次開啟
+                    primaryStage.hide();
+                } else {
+                    // 不支援的檔案格式，詢問使用者是否要用系統預設程式開啟
+                    showUnsupportedFileDialog(file, physicalFile);
+                }
             } else {
                 showError("開啟失敗", "檔案不存在或已被移動");
             }
+        }
+    }
+
+    /**
+     * 檢查檔案是否為E_Reader支援的格式
+     */
+    private boolean isSupportedByEReader(FileItem file) {
+        String extension = file.getExtension().toLowerCase();
+        return extension.equals("pdf") || 
+               extension.equals("epub") || 
+               isImageExtension(extension);
+    }
+
+    /**
+     * 檢查是否為圖片副檔名
+     */
+    private boolean isImageExtension(String extension) {
+        return extension.equals("jpg") || extension.equals("jpeg") ||
+               extension.equals("png") || extension.equals("gif") ||
+               extension.equals("bmp") || extension.equals("tiff") ||
+               extension.equals("webp");
+    }
+
+    /**
+     * 顯示不支援檔案格式的對話框
+     */
+    private void showUnsupportedFileDialog(FileItem fileItem, File physicalFile) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("檔案格式不支援");
+        alert.setHeaderText("檔案: " + fileItem.getName());
+        
+        StringBuilder content = new StringBuilder();
+        content.append("此檔案類型不支援在E_Reader中直接開啟。\n\n");
+        content.append("支援的檔案格式：\n");
+        content.append("• PDF檔案 (.pdf)\n");
+        content.append("• EPUB電子書 (.epub)\n");
+        content.append("• 圖片檔案 (.jpg, .png, .gif, .bmp, .tiff, .webp)\n\n");
+        content.append("是否要使用系統預設程式開啟此檔案？");
+        
+        alert.setContentText(content.toString());
+
+        ButtonType openWithSystemButton = new ButtonType("使用系統程式開啟");
+        ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(openWithSystemButton, cancelButton);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == openWithSystemButton) {
+            openWithSystemDefault(physicalFile);
+        }
+    }
+
+    /**
+     * 使用系統預設程式開啟檔案
+     */
+    private void openWithSystemDefault(File file) {
+        try {
+            if (java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+                if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
+                    desktop.open(file);
+                    statusLabel.setText("已使用系統預設程式開啟: " + file.getName());
+                } else {
+                    showError("開啟失敗", "系統不支援自動開啟檔案功能");
+                }
+            } else {
+                showError("開啟失敗", "系統不支援桌面整合功能");
+            }
+        } catch (Exception e) {
+            showError("開啟失敗", 
+                "無法開啟檔案: " + file.getName() + "\n\n" +
+                "錯誤原因: " + e.getMessage() + "\n\n" +
+                "建議：請手動使用適當的程式開啟此檔案。");
         }
     }
 

@@ -19,35 +19,35 @@ public class Main extends Application {
             // 創建檔案管理器視窗
             Stage fileManagerStage = new Stage();
             fileManagerStage.setTitle("E_Reader - 檔案管理器");
-            
+
             // 初始化主控制器（但不顯示主視窗）
             mainController = new MainController(primaryStage);
-            
+
             // 獲取檔案管理器控制器
             var fileManagerController = mainController.getFileManagerController();
-            
+
             // 設定檔案開啟回調 - 當用戶選擇檔案時啟動閱讀器
             fileManagerController.initialize(file -> {
                 try {
                     // 初始化主控制器
                     mainController.initialize();
-                    
+
                     // 關閉檔案管理器
                     fileManagerStage.hide();
-                    
+
                     // 顯示主閱讀器視窗
                     primaryStage.show();
-                    
+
                     // 開啟選中的檔案
                     openSelectedFile(file);
-                    
+
                 } catch (Exception ex) {
                     System.err.println("開啟檔案失敗: " + ex.getMessage());
                     ex.printStackTrace();
                     showFileOpenError(primaryStage, ex, file.getName());
                 }
             });
-            
+
             // 設定檔案管理器視窗
             fileManagerStage.setOnCloseRequest(e -> {
                 // 如果用戶關閉檔案管理器而沒有選擇檔案，結束應用程式
@@ -55,14 +55,14 @@ public class Main extends Application {
                     Platform.exit();
                 }
             });
-            
+
             // 顯示檔案管理器
             fileManagerController.show();
-            
+
         } catch (Exception e) {
             System.err.println("應用程式啟動失敗: " + e.getMessage());
             e.printStackTrace();
-            
+
             // 顯示錯誤訊息
             showStartupError(primaryStage, e);
         }
@@ -84,9 +84,9 @@ public class Main extends Application {
             showError("錯誤", "檔案不存在或已被移動");
             return;
         }
-        
+
         String fileName = file.getName().toLowerCase();
-        
+
         if (fileName.endsWith(".pdf")) {
             // 開啟PDF檔案
             try {
@@ -95,7 +95,7 @@ public class Main extends Application {
                     mainController.getStateManager().setFileLoaded(file.getAbsolutePath(), true, false, images, null);
                     mainController.getImageViewer().setImages(images);
                     mainController.getPrimaryStage().setTitle("E_Reader - " + file.getName());
-                    
+
                     showSuccess("檔案開啟", "成功開啟 PDF檔案: " + file.getName());
                 }
             } catch (Exception ex) {
@@ -109,7 +109,7 @@ public class Main extends Application {
                     mainController.getStateManager().setFileLoaded(file.getAbsolutePath(), false, true, images, null);
                     mainController.getImageViewer().setImages(images);
                     mainController.getPrimaryStage().setTitle("E_Reader - " + file.getName());
-                    
+
                     showSuccess("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
                 } else {
                     showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
@@ -117,33 +117,171 @@ public class Main extends Application {
             } catch (Exception ex) {
                 showError("無法載入 EPUB 檔案", ex.getMessage());
             }
-        } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
-                   fileName.endsWith(".png") || fileName.endsWith(".gif") || 
-                   fileName.endsWith(".bmp")) {
-            // 開啟圖片檔案 - 載入整個資料夾
-            java.io.File parentFolder = file.getParentFile();
-            if (parentFolder != null) {
-                var images = mainController.getImageLoader().loadImagesFromFolder(parentFolder);
-                if (!images.isEmpty()) {
-                    mainController.getStateManager().setFileLoaded(parentFolder.getAbsolutePath(), false, false, images, null);
-                    mainController.getImageViewer().setImages(images);
-                    
-                    // 找到當前檔案的索引並跳轉到該頁
-                    // 暫時跳到第一張圖片
-                    
-                    mainController.getPrimaryStage().setTitle("E_Reader - " + parentFolder.getName());
-                    
-                    showSuccess("檔案開啟", "成功載入圖片資料夾: " + parentFolder.getName());
-                } else {
-                    showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
-                }
-            }
+        } else if (isImageFile(fileName)) {
+            // 開啟圖片檔案 - 改善的處理方式
+            openImageFile(file);
         } else {
-            showError("不支援的檔案格式", 
-                "支援的格式：PDF檔案、EPUB檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
+            // 不支援的檔案格式，嘗試使用系統預設程式開啟
+            openWithSystemDefault(file);
         }
     }
-    
+
+    /**
+     * 檢查是否為圖片檔案
+     */
+    private boolean isImageFile(String fileName) {
+        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+                fileName.endsWith(".png") || fileName.endsWith(".gif") ||
+                fileName.endsWith(".bmp") || fileName.endsWith(".tiff") ||
+                fileName.endsWith(".webp");
+    }
+
+    /**
+     * 開啟圖片檔案 - 改善的處理方式
+     */
+    private void openImageFile(java.io.File file) {
+        java.io.File parentFolder = file.getParentFile();
+        if (parentFolder == null) {
+            showError("載入失敗", "無法存取檔案的父資料夾");
+            return;
+        }
+
+        try {
+            // 載入整個資料夾的圖片
+            var images = mainController.getImageLoader().loadImagesFromFolder(parentFolder);
+            if (images.isEmpty()) {
+                showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
+                return;
+            }
+
+            mainController.getStateManager().setFileLoaded(parentFolder.getAbsolutePath(), false, false, images, null);
+            mainController.getImageViewer().setImages(images);
+
+            // 找到當前檔案在圖片列表中的索引位置
+            int targetIndex = findImageIndex(parentFolder, file, images);
+            if (targetIndex >= 0) {
+                mainController.getImageViewer().goToPage(targetIndex);
+                showSuccess("檔案開啟",
+                        String.format("成功載入圖片資料夾: %s (共 %d 張圖片，目前第 %d 張)",
+                                parentFolder.getName(), images.size(), targetIndex + 1));
+            } else {
+                mainController.getImageViewer().goToFirstPage();
+                showSuccess("檔案開啟",
+                        String.format("成功載入圖片資料夾: %s (共 %d 張圖片)",
+                                parentFolder.getName(), images.size()));
+            }
+
+            mainController.getPrimaryStage().setTitle("E_Reader - " + parentFolder.getName());
+
+        } catch (Exception ex) {
+            showError("無法載入圖片資料夾", ex.getMessage());
+        }
+    }
+
+    /**
+     * 找到目標圖片檔案在圖片列表中的索引
+     */
+    private int findImageIndex(java.io.File parentFolder, java.io.File targetFile, java.util.List<javafx.scene.image.Image> images) {
+        try {
+            // 獲取資料夾中所有支援的圖片檔案
+            java.io.File[] imageFiles = parentFolder.listFiles(this::isSupportedImageFile);
+            if (imageFiles == null) return -1;
+
+            // 按檔名排序（與ImageLoader中的排序方式一致）
+            java.util.Arrays.sort(imageFiles, java.util.Comparator.comparing(java.io.File::getName));
+
+            // 找到目標檔案的索引
+            for (int i = 0; i < imageFiles.length; i++) {
+                if (imageFiles[i].equals(targetFile)) {
+                    return i;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("尋找圖片索引時發生錯誤: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    /**
+     * 檢查檔案是否為支援的圖片格式
+     */
+    private boolean isSupportedImageFile(java.io.File file) {
+        if (file == null || !file.isFile()) {
+            return false;
+        }
+        String fileName = file.getName().toLowerCase();
+        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+                fileName.endsWith(".png") || fileName.endsWith(".gif") ||
+                fileName.endsWith(".bmp") || fileName.endsWith(".tiff") ||
+                fileName.endsWith(".webp");
+    }
+
+    /**
+     * 使用系統預設程式開啟檔案
+     */
+    private void openWithSystemDefault(java.io.File file) {
+        try {
+            if (java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+                if (desktop.isSupported(java.awt.Desktop.Action.OPEN)) {
+                    desktop.open(file);
+                    showSuccess("檔案開啟", "已使用系統預設程式開啟: " + file.getName());
+                } else {
+                    showUnsupportedFileDialog(file);
+                }
+            } else {
+                showUnsupportedFileDialog(file);
+            }
+        } catch (Exception e) {
+            System.err.println("使用系統預設程式開啟檔案失敗: " + e.getMessage());
+            showError("開啟失敗",
+                    "無法開啟檔案: " + file.getName() + "\n\n" +
+                            "錯誤原因: " + e.getMessage() + "\n\n" +
+                            "建議：請手動使用適當的程式開啟此檔案。");
+        }
+    }
+
+    /**
+     * 顯示不支援的檔案類型對話框
+     */
+    private void showUnsupportedFileDialog(java.io.File file) {
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.INFORMATION);
+        alert.setTitle("檔案類型資訊");
+        alert.setHeaderText("檔案: " + file.getName());
+
+        StringBuilder content = new StringBuilder();
+        content.append("此檔案類型不支援在E_Reader中直接開啟。\n\n");
+        content.append("支援的檔案格式：\n");
+        content.append("• PDF檔案 (.pdf)\n");
+        content.append("• EPUB電子書 (.epub)\n");
+        content.append("• 圖片檔案 (.jpg, .png, .gif, .bmp, .tiff, .webp)\n\n");
+        content.append("你可以：\n");
+        content.append("1. 點選「使用系統程式開啟」來用預設程式開啟檔案\n");
+        content.append("2. 或者手動使用適當的程式開啟此檔案");
+
+        alert.setContentText(content.toString());
+
+        // 新增「使用系統程式開啟」按鈕
+        javafx.scene.control.ButtonType openWithSystemButton =
+                new javafx.scene.control.ButtonType("使用系統程式開啟");
+        javafx.scene.control.ButtonType cancelButton =
+                new javafx.scene.control.ButtonType("取消", javafx.scene.control.ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(openWithSystemButton, cancelButton);
+
+        java.util.Optional<javafx.scene.control.ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == openWithSystemButton) {
+            try {
+                if (java.awt.Desktop.isDesktopSupported()) {
+                    java.awt.Desktop.getDesktop().open(file);
+                }
+            } catch (Exception e) {
+                showError("開啟失敗", "無法使用系統預設程式開啟檔案: " + e.getMessage());
+            }
+        }
+    }
+
     /**
      * 顯示檔案開啟錯誤訊息
      */
@@ -152,21 +290,21 @@ public class Main extends Application {
                 javafx.scene.control.Alert.AlertType.ERROR);
         alert.setTitle("檔案開啟錯誤");
         alert.setHeaderText("無法開啟檔案: " + fileName);
-        alert.setContentText("錯誤詳情：\n" + e.getMessage() + 
+        alert.setContentText("錯誤詳情：\n" + e.getMessage() +
                 "\n\n可能的原因：" +
                 "\n• 檔案格式不受支援" +
                 "\n• 檔案已損壞或不完整" +
                 "\n• 缺少必要的編解碼器" +
                 "\n• 記憶體不足" +
                 "\n• 檔案正被其他程式使用");
-        
+
         if (stage != null) {
             alert.initOwner(stage);
         }
-        
+
         alert.showAndWait();
     }
-    
+
     /**
      * 顯示成功訊息
      */
@@ -177,7 +315,7 @@ public class Main extends Application {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.show();
-        
+
         // 3秒後自動關閉
         java.util.Timer timer = new java.util.Timer();
         timer.schedule(new java.util.TimerTask() {
@@ -187,7 +325,7 @@ public class Main extends Application {
             }
         }, 3000);
     }
-    
+
     /**
      * 顯示錯誤訊息
      */
@@ -208,44 +346,44 @@ public class Main extends Application {
                 javafx.scene.control.Alert.AlertType.ERROR);
         alert.setTitle("啟動錯誤");
         alert.setHeaderText("E-Reader 無法正常啟動");
-        alert.setContentText("錯誤詳情：\n" + e.getMessage() + 
+        alert.setContentText("錯誤詳情：\n" + e.getMessage() +
                 "\n\n請檢查以下項目：" +
                 "\n• Java 版本是否為 17 或更高" +
                 "\n• JavaFX 運行時是否正確安裝" +
                 "\n• 相關依賴庫是否完整" +
                 "\n• 系統記憶體是否充足");
-        
+
         if (stage != null) {
             alert.initOwner(stage);
         }
-        
+
         alert.showAndWait();
     }
 
     /**
      * 主程式入口點
-     * 
+     *
      * @param args 命令行參數
      */
     public static void main(String[] args) {
         // 設定系統屬性
         System.setProperty("javafx.preloader", "");
         System.setProperty("file.encoding", "UTF-8");
-        
+
         // 設定 JavaFX 相關屬性（可選）
         System.setProperty("prism.lcdtext", "false");  // 改善文字渲染
         System.setProperty("prism.text", "t2k");       // 使用 T2K 文字引擎
-        
+
         try {
             // 啟動 JavaFX 應用程式
             launch(args);
         } catch (Exception e) {
             System.err.println("應用程式啟動失敗: " + e.getMessage());
             e.printStackTrace();
-            
+
             // 嘗試使用 Swing 顯示錯誤訊息
             showSwingError(e);
-            
+
             System.exit(1);
         }
     }
