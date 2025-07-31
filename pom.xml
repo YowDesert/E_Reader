@@ -216,7 +216,7 @@
                 <artifactId>jpackage-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-<!--                    <n>E-Reader</n>-->
+                    <name>E-Reader</name>
                     <appVersion>${project.version}</appVersion>
                     <vendor>E-Reader Team</vendor>
                     <destination>${project.build.directory}/installer</destination>
@@ -226,14 +226,6 @@
                         <option>-Dfile.encoding=UTF-8</option>
                         <option>-Djava.awt.headless=false</option>
                     </javaOptions>
-<!--                    <linuxOptions>-->
-<!--                        <packageType>DEB</packageType>-->
-<!--                    </linuxOptions>-->
-<!--                    <winOptions>-->
-<!--                        <winDirChooser>true</winDirChooser>-->
-<!--                        <winShortcut>true</winShortcut>-->
-<!--                        <winMenu>true</winMenu>-->
-<!--                    </winOptions>-->
                 </configuration>
                 <executions>
                     <execution>

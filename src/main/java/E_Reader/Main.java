@@ -1,5 +1,6 @@
 package E_Reader;
 
+import E_Reader.core.EpubLoader;
 import E_Reader.ui.MainController;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -100,6 +101,22 @@ public class Main extends Application {
             } catch (Exception ex) {
                 showError("無法載入 PDF 檔案", ex.getMessage());
             }
+        } else if (fileName.endsWith(".epub")) {
+            // 開啟EPUB檔案
+            try {
+                var images = mainController.getEpubLoader().loadImagesFromEpub(file);
+                if (!images.isEmpty()) {
+                    mainController.getStateManager().setFileLoaded(file.getAbsolutePath(), false, true, images, null);
+                    mainController.getImageViewer().setImages(images);
+                    mainController.getPrimaryStage().setTitle("E_Reader - " + file.getName());
+                    
+                    showSuccess("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
+                } else {
+                    showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
+                }
+            } catch (Exception ex) {
+                showError("無法載入 EPUB 檔案", ex.getMessage());
+            }
         } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
                    fileName.endsWith(".png") || fileName.endsWith(".gif") || 
                    fileName.endsWith(".bmp")) {
@@ -123,7 +140,7 @@ public class Main extends Application {
             }
         } else {
             showError("不支援的檔案格式", 
-                "只支援 PDF 檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
+                "支援的格式：PDF檔案、EPUB檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
         }
     }
     

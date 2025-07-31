@@ -37,6 +37,7 @@ public class MainController {
     private final TextRenderer textRenderer;
     private final ImageLoader imageLoader;
     private final PdfLoader pdfLoader;
+    private final EpubLoader epubLoader;
     private final TextExtractor textExtractor;
     private final BookmarkManager bookmarkManager;
     private final SettingsManager settingsManager;
@@ -76,6 +77,7 @@ public class MainController {
         this.textRenderer = new TextRenderer();
         this.imageLoader = new ImageLoader();
         this.pdfLoader = new PdfLoader();
+        this.epubLoader = new EpubLoader();
         this.textExtractor = new TextExtractor();
         this.bookmarkManager = new BookmarkManager();
         this.settingsManager = new SettingsManager();
@@ -323,6 +325,26 @@ public class MainController {
             } catch (Exception ex) {
                 AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
             }
+        } else if (fileName.endsWith(".epub")) {
+            // 開啟EPUB檔案
+            try {
+                List<Image> images = epubLoader.loadImagesFromEpub(file);
+                if (!images.isEmpty()) {
+                    stateManager.setFileLoaded(file.getAbsolutePath(), false, true, images, null);
+                    switchToImageMode();
+                    imageViewer.setImages(images);
+                    primaryStage.setTitle("E_Reader - " + file.getName());
+                    updateUI();
+                    resetTextModeButton();
+                    
+                    // 顯示成功訊息
+                    showNotification("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
+                } else {
+                    AlertHelper.showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
+                }
+            } catch (Exception ex) {
+                AlertHelper.showError("無法載入 EPUB 檔案", ex.getMessage());
+            }
         } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
                    fileName.endsWith(".png") || fileName.endsWith(".gif") || 
                    fileName.endsWith(".bmp")) {
@@ -355,7 +377,7 @@ public class MainController {
             }
         } else {
             AlertHelper.showError("不支援的檔案格式", 
-                "只支援 PDF 檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
+                "支援的格式：PDF檔案、EPUB檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
         }
     }
 
@@ -432,6 +454,8 @@ public class MainController {
                 List<TextExtractor.PageText> textPages;
                 if (stateManager.isPdfMode()) {
                     textPages = textExtractor.extractTextFromPdf(new File(stateManager.getCurrentFilePath()));
+                } else if (stateManager.isEpubMode()) {
+                    textPages = epubLoader.extractTextFromEpub(new File(stateManager.getCurrentFilePath()));
                 } else {
                     textPages = textExtractor.extractTextFromImages(stateManager.getCurrentImages());
                 }
@@ -673,6 +697,7 @@ public class MainController {
     public FileManagerController getFileManagerController() { return fileManagerController; }
     public ImageLoader getImageLoader() { return imageLoader; }
     public PdfLoader getPdfLoader() { return pdfLoader; }
+    public EpubLoader getEpubLoader() { return epubLoader; }
     public TextExtractor getTextExtractor() { return textExtractor; }
 
     // 書籤管理
