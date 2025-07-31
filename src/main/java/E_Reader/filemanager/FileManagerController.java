@@ -10,6 +10,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -131,10 +132,10 @@ public class FileManagerController {
                     System.out.println("Created 圖片 folder");
                 }
 
-                // 創建測試資料夾
-                if (fileManagerData.createFolder("測試資料夾", "root")) {
-                    System.out.println("Created 測試資料夾 folder");
-                }
+//                // 創建測試資料夾
+//                if (fileManagerData.createFolder("測試資料夾", "root")) {
+//                    System.out.println("Created 測試資料夾 folder");
+//                }
 
                 System.out.println("Test folders created");
             }
@@ -191,23 +192,32 @@ public class FileManagerController {
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0;");
 
-        // 匯入PDF按鈕
-        Button importPdfBtn = new Button("📄 匯入PDF");
-        importPdfBtn.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
-        importPdfBtn.setOnAction(e -> showImportPdfDialog());
-        importPdfBtn.setTooltip(new Tooltip("選擇PDF檔案並匯入到PDF文件資料夾"));
+        // 匯入檔案按鈕（匯入到當前資料夾）
+        Button importFileBtn = new Button("📁 匯入檔案");
+        importFileBtn.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
+        importFileBtn.setOnAction(e -> showImportToCurrentFolderDialog());
+        importFileBtn.setTooltip(new Tooltip("選擇檔案並匯入到當前資料夾"));
 
-        // 匯入EPUB按鈕
-        Button importEpubBtn = new Button("📚 匯入EPUB");
-        importEpubBtn.setStyle("-fx-background-color: #6f42c1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
-        importEpubBtn.setOnAction(e -> showImportEpubDialog());
-        importEpubBtn.setTooltip(new Tooltip("選擇EPUB檔案並匯入到電子書資料夾"));
+        // 匯入資料夾按鈕（專門用於匯入整個資料夾）
+        Button importFolderBtn = new Button("📂 匯入資料夾");
+        importFolderBtn.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
+        importFolderBtn.setOnAction(e -> showImportFolderDialog());
+        importFolderBtn.setTooltip(new Tooltip("選擇整個資料夾匯入到當前位置"));
 
-        // 匯入圖片按鈕
-        Button importImageBtn = new Button("🖼️ 匯入圖片");
-        importImageBtn.setStyle("-fx-background-color: #fd7e14; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 20; -fx-font-size: 14px;");
-        importImageBtn.setOnAction(e -> showImportImageDialog());
-        importImageBtn.setTooltip(new Tooltip("選擇圖片檔案並匯入到圖片資料夾"));
+        // 快速匯入按鈕（保留原有的分類匯入功能）
+        MenuButton quickImportBtn = new MenuButton("⚡ 快速匯入");
+        quickImportBtn.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-font-size: 12px;");
+        
+        MenuItem importPdfItem = new MenuItem("📄 PDF到PDF文件資料夾");
+        importPdfItem.setOnAction(e -> showImportPdfDialog());
+        
+        MenuItem importEpubItem = new MenuItem("📚 EPUB到電子書資料夾");
+        importEpubItem.setOnAction(e -> showImportEpubDialog());
+        
+        MenuItem importImageItem = new MenuItem("🖼️ 圖片到圖片資料夾");
+        importImageItem.setOnAction(e -> showImportImageDialog());
+        
+        quickImportBtn.getItems().addAll(importPdfItem, importEpubItem, importImageItem);
 
         // 新增資料夾按鈕
         Button newFolderBtn = new Button("📂 新增資料夾");
@@ -250,7 +260,7 @@ public class FileManagerController {
         });
 
         toolbar.getChildren().addAll(
-                importPdfBtn, importEpubBtn, importImageBtn,
+                importFileBtn, importFolderBtn, quickImportBtn,
                 new Separator(), newFolderBtn, refreshBtn,
                 new Separator(), searchField, sortComboBox,
                 new Separator(), gridViewBtn, listViewBtn
@@ -875,6 +885,360 @@ public class FileManagerController {
     }
 
     // 對話框和功能方法
+    
+    /**
+     * 顯示匯入檔案到當前資料夾的對話框
+     */
+    private void showImportToCurrentFolderDialog() {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("選擇要匯入的檔案");
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("所有支援的檔案", "*.pdf", "*.epub", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tiff", "*.webp", "*.txt", "*.doc", "*.docx"),
+                    new FileChooser.ExtensionFilter("PDF 檔案", "*.pdf"),
+                    new FileChooser.ExtensionFilter("EPUB 檔案", "*.epub"),
+                    new FileChooser.ExtensionFilter("圖片檔案", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tiff", "*.webp"),
+                    new FileChooser.ExtensionFilter("文字檔案", "*.txt", "*.doc", "*.docx"),
+                    new FileChooser.ExtensionFilter("所有檔案", "*.*")
+            );
+
+            // 設定初始目錄
+            String userHome = System.getProperty("user.home");
+            File initialDir = new File(userHome, "Desktop");
+            if (!initialDir.exists()) {
+                initialDir = new File(userHome);
+            }
+            fileChooser.setInitialDirectory(initialDir);
+
+            List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
+            if (selectedFiles != null && !selectedFiles.isEmpty()) {
+                // 顯示確認對話框
+                String currentFolderName = getCurrentFolderDisplayName();
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("確認匯入");
+                confirmAlert.setHeaderText("確認匯入檔案到當前資料夾");
+                confirmAlert.setContentText("將匯入 " + selectedFiles.size() + " 個檔案到 '" + currentFolderName + "' 資料夾。\n\n這會複製檔案到您的資料庫中。");
+
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    importFilesToCurrentFolder(selectedFiles);
+                }
+            }
+        } catch (Exception e) {
+            showError("匯入錯誤", "開啟檔案選擇器時發生錯誤: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 顯示匯入整個資料夾的對話框
+     */
+    private void showImportFolderDialog() {
+        try {
+            javafx.stage.DirectoryChooser directoryChooser = new javafx.stage.DirectoryChooser();
+            directoryChooser.setTitle("選擇要匯入的資料夾");
+            
+            // 設定初始目錄
+            String userHome = System.getProperty("user.home");
+            File initialDir = new File(userHome, "Desktop");
+            if (!initialDir.exists()) {
+                initialDir = new File(userHome);
+            }
+            directoryChooser.setInitialDirectory(initialDir);
+
+            File selectedDirectory = directoryChooser.showDialog(primaryStage);
+            if (selectedDirectory != null && selectedDirectory.exists() && selectedDirectory.isDirectory()) {
+                // 計算資料夾中的檔案數量
+                int fileCount = countFilesInDirectory(selectedDirectory);
+                
+                // 顯示確認對話框
+                String currentFolderName = getCurrentFolderDisplayName();
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("確認匯入資料夾");
+                confirmAlert.setHeaderText("確認匯入整個資料夾");
+                confirmAlert.setContentText("將匯入資料夾 '" + selectedDirectory.getName() + "' 及其所有內容（約 " + fileCount + " 個檔案）到 '" + currentFolderName + "' 資料夾。\n\n這會複製整個資料夾結構到您的資料庫中。");
+
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    importDirectoryToCurrentFolder(selectedDirectory);
+                }
+            }
+        } catch (Exception e) {
+            showError("匯入錯誤", "開啟資料夾選擇器時發生錯誤: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 取得當前資料夾的顯示名稱
+     */
+    private String getCurrentFolderDisplayName() {
+        if ("root".equals(currentFolderId)) {
+            return "根目錄";
+        }
+        FolderItem currentFolder = fileManagerData.getFolder(currentFolderId);
+        return currentFolder != null ? currentFolder.getName() : "未知資料夾";
+    }
+    
+    /**
+     * 計算目錄中的檔案數量（遞迴）
+     */
+    private int countFilesInDirectory(File directory) {
+        int count = 0;
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    count++;
+                } else if (file.isDirectory()) {
+                    count += countFilesInDirectory(file);
+                }
+            }
+        }
+        return count;
+    }
+    
+    /**
+     * 匯入檔案到當前資料夾
+     */
+    private void importFilesToCurrentFolder(List<File> files) {
+        String currentFolderName = getCurrentFolderDisplayName();
+        statusLabel.setText("正在匯入檔案到 " + currentFolderName + "...");
+        showImportProgress();
+
+        Thread importThread = new Thread(() -> {
+            int successCount = 0;
+            int totalFiles = files.size();
+            int errorCount = 0;
+            List<String> errorMessages = new ArrayList<>();
+
+            for (int i = 0; i < files.size(); i++) {
+                File file = files.get(i);
+
+                // 更新狀態顯示
+                final String currentFileName = file.getName();
+                final int currentIndex = i + 1;
+                Platform.runLater(() -> statusLabel.setText("正在處理: " + currentFileName + " (" + currentIndex + "/" + totalFiles + ")"));
+
+                try {
+                    if (fileManagerData.importFile(file, currentFolderId)) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        errorMessages.add("無法匯入: " + file.getName());
+                    }
+                } catch (Exception e) {
+                    errorCount++;
+                    String errorMsg = "匯入 " + file.getName() + " 失敗: " + e.getMessage();
+                    errorMessages.add(errorMsg);
+                    System.err.println(errorMsg);
+                }
+
+                // 更新進度
+                final double progress = (double) (i + 1) / totalFiles;
+                Platform.runLater(() -> updateImportProgress(progress));
+            }
+
+            final int finalSuccessCount = successCount;
+            final int finalErrorCount = errorCount;
+            final List<String> finalErrorMessages = new ArrayList<>(errorMessages);
+
+            Platform.runLater(() -> {
+                hideImportProgress();
+                loadCurrentFolder();
+
+                // 構建結果訊息
+                StringBuilder resultMessage = new StringBuilder();
+                resultMessage.append("成功匯入 ").append(finalSuccessCount).append(" 個檔案到 ").append(currentFolderName);
+
+                if (finalErrorCount > 0) {
+                    resultMessage.append("，").append(finalErrorCount).append(" 個檔案匯入失敗");
+                }
+
+                statusLabel.setText(resultMessage.toString());
+
+                // 顯示詳細結果對話框
+                if (finalSuccessCount > 0 || finalErrorCount > 0) {
+                    Alert alert;
+                    if (finalErrorCount == 0) {
+                        alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("匯入完成");
+                    } else {
+                        alert = new Alert(Alert.AlertType.WARNING);
+                        alert.setTitle("匯入完成（有錯誤）");
+                    }
+
+                    alert.setHeaderText(resultMessage.toString());
+
+                    if (finalErrorCount > 0 && !finalErrorMessages.isEmpty()) {
+                        StringBuilder errorDetails = new StringBuilder("錯誤詳情：\n");
+                        for (int i = 0; i < Math.min(5, finalErrorMessages.size()); i++) {
+                            errorDetails.append("• ").append(finalErrorMessages.get(i)).append("\n");
+                        }
+                        if (finalErrorMessages.size() > 5) {
+                            errorDetails.append("...還有 ").append(finalErrorMessages.size() - 5).append(" 個錯誤");
+                        }
+                        alert.setContentText(errorDetails.toString());
+                    } else {
+                        alert.setContentText("所有檔案已成功匯入到當前資料夾中。");
+                    }
+
+                    alert.showAndWait();
+                }
+            });
+        });
+
+        importThread.setDaemon(true);
+        importThread.start();
+    }
+    
+    /**
+     * 匯入整個資料夾到當前資料夾
+     */
+    private void importDirectoryToCurrentFolder(File sourceDirectory) {
+        String currentFolderName = getCurrentFolderDisplayName();
+        statusLabel.setText("正在匯入資料夾 " + sourceDirectory.getName() + " 到 " + currentFolderName + "...");
+        showImportProgress();
+
+        Thread importThread = new Thread(() -> {
+            try {
+                // 先建立對應的資料夾
+                String newFolderId = null;
+                boolean folderCreated = fileManagerData.createFolder(sourceDirectory.getName(), currentFolderId);
+                
+                if (folderCreated) {
+                    // 找到新建的資料夾ID
+                    List<FolderItem> folders = fileManagerData.getFolders(currentFolderId);
+                    for (FolderItem folder : folders) {
+                        if (folder.getName().equals(sourceDirectory.getName())) {
+                            newFolderId = folder.getId();
+                            break;
+                        }
+                    }
+                }
+                
+                if (newFolderId == null) {
+                    Platform.runLater(() -> {
+                        hideImportProgress();
+                        showError("建立資料夾失敗", "無法建立目標資料夾: " + sourceDirectory.getName());
+                    });
+                    return;
+                }
+                
+                // 遞迴匯入資料夾內容
+                ImportResult result = importDirectoryRecursively(sourceDirectory, newFolderId);
+                
+                Platform.runLater(() -> {
+                    hideImportProgress();
+                    loadCurrentFolder();
+                    
+                    StringBuilder resultMessage = new StringBuilder();
+                    resultMessage.append("成功匯入資料夾 '").append(sourceDirectory.getName()).append("' 到 ").append(currentFolderName);
+                    resultMessage.append("\n檔案: ").append(result.successFiles).append(" 成功");
+                    resultMessage.append("，資料夾: ").append(result.successFolders).append(" 成功");
+                    
+                    if (result.errorFiles > 0 || result.errorFolders > 0) {
+                        resultMessage.append("\n錯誤: ").append(result.errorFiles).append(" 檔案，").append(result.errorFolders).append(" 資料夾");
+                    }
+
+                    statusLabel.setText("匯入完成: " + result.successFiles + " 檔案，" + result.successFolders + " 資料夾");
+
+                    // 顯示結果對話框
+                    Alert alert;
+                    if (result.errorFiles == 0 && result.errorFolders == 0) {
+                        alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("匯入完成");
+                    } else {
+                        alert = new Alert(Alert.AlertType.WARNING);
+                        alert.setTitle("匯入完成（有錯誤）");
+                    }
+
+                    alert.setHeaderText("資料夾匯入結果");
+                    alert.setContentText(resultMessage.toString());
+                    alert.showAndWait();
+                });
+                
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    hideImportProgress();
+                    showError("匯入失敗", "匯入資料夾時發生錯誤: " + e.getMessage());
+                });
+            }
+        });
+
+        importThread.setDaemon(true);
+        importThread.start();
+    }
+    
+    /**
+     * 遞迴匯入資料夾內容
+     */
+    private ImportResult importDirectoryRecursively(File sourceDir, String targetFolderId) {
+        ImportResult result = new ImportResult();
+        
+        File[] files = sourceDir.listFiles();
+        if (files == null) {
+            return result;
+        }
+        
+        for (File file : files) {
+            if (file.isFile()) {
+                try {
+                    if (fileManagerData.importFile(file, targetFolderId)) {
+                        result.successFiles++;
+                    } else {
+                        result.errorFiles++;
+                    }
+                } catch (Exception e) {
+                    result.errorFiles++;
+                    System.err.println("匯入檔案失敗 " + file.getName() + ": " + e.getMessage());
+                }
+            } else if (file.isDirectory()) {
+                try {
+                    // 建立子資料夾
+                    boolean folderCreated = fileManagerData.createFolder(file.getName(), targetFolderId);
+                    if (folderCreated) {
+                        result.successFolders++;
+                        
+                        // 找到新建的資料夾ID
+                        String newSubFolderId = null;
+                        List<FolderItem> subFolders = fileManagerData.getFolders(targetFolderId);
+                        for (FolderItem folder : subFolders) {
+                            if (folder.getName().equals(file.getName())) {
+                                newSubFolderId = folder.getId();
+                                break;
+                            }
+                        }
+                        
+                        if (newSubFolderId != null) {
+                            // 遞迴匯入子資料夾內容
+                            ImportResult subResult = importDirectoryRecursively(file, newSubFolderId);
+                            result.successFiles += subResult.successFiles;
+                            result.errorFiles += subResult.errorFiles;
+                            result.successFolders += subResult.successFolders;
+                            result.errorFolders += subResult.errorFolders;
+                        }
+                    } else {
+                        result.errorFolders++;
+                    }
+                } catch (Exception e) {
+                    result.errorFolders++;
+                    System.err.println("建立資料夾失敗 " + file.getName() + ": " + e.getMessage());
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 匯入結果統計類別
+     */
+    private static class ImportResult {
+        int successFiles = 0;
+        int errorFiles = 0;
+        int successFolders = 0;
+        int errorFolders = 0;
+    }
+
     private void showImportPdfDialog() {
         try {
             FileChooser fileChooser = new FileChooser();
@@ -1277,6 +1641,7 @@ public class FileManagerController {
             if (fileManagerData.createFolder(folderName, currentFolderId)) {
                 loadCurrentFolder();
                 statusLabel.setText("已建立資料夾: " + folderName);
+                refreshFolderPanel();
             } else {
                 showError("建立失敗", "無法建立資料夾，可能名稱已存在或包含無效字符");
             }
