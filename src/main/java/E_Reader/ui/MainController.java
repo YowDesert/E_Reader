@@ -78,9 +78,10 @@ public class MainController {
         this.imageLoader = new ImageLoader();
         this.pdfLoader = new PdfLoader();
         this.epubLoader = new EpubLoader();
-        this.textExtractor = new TextExtractor();
         this.bookmarkManager = new BookmarkManager();
         this.settingsManager = new SettingsManager();
+        // 修正：使用settingsManager初始化textExtractor
+        this.textExtractor = new TextExtractor(settingsManager);
         // 修正：使用單一 Stage 實例來避免重複創建
         this.fileManagerController = FileManagerController.getInstance();
 
@@ -280,6 +281,9 @@ public class MainController {
      * 初始化檔案管理器
      */
     private void initializeFileManager() {
+        // 傳遞設定管理器給檔案管理器
+        fileManagerController.setSettingsManager(settingsManager);
+        fileManagerController.setTextExtractor(textExtractor);
         fileManagerController.initialize(this::openFileFromManager);
     }
     
@@ -1043,6 +1047,8 @@ public class MainController {
         themeCombo.getItems().addAll(SettingsManager.ThemeMode.values());
         themeCombo.setValue(settingsManager.getThemeMode());
 
+        // OCR設定已移至檔案管理器
+
         // 記住最後檔案
         CheckBox rememberFileCheckBox = new CheckBox("記住最後開啟的檔案");
         rememberFileCheckBox.setSelected(settingsManager.isRememberLastFile());
@@ -1053,6 +1059,7 @@ public class MainController {
 
         content.getChildren().addAll(
                 themeLabel, themeCombo,
+                new Separator(),
                 rememberFileCheckBox,
                 showPageNumbersCheckBox
         );

@@ -1,6 +1,8 @@
 package E_Reader.filemanager;
 
 import E_Reader.ui.MainController;
+import E_Reader.settings.SettingsManager;
+import E_Reader.core.TextExtractor;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,6 +15,7 @@ import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import java.util.Optional;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +63,10 @@ public class FileManagerController {
 
     // 回調函數
     private FileOpenCallback fileOpenCallback;
+    
+    // 設定相關
+    private SettingsManager settingsManager;
+    private TextExtractor textExtractor;
 
     public interface FileOpenCallback {
         void onFileOpen(File file);
@@ -91,6 +98,8 @@ public class FileManagerController {
 
         this.libraryPath = chosenPath;
         this.fileManagerData = new FileManagerData(libraryPath);
+        
+        // 設定管理器將從MainController傳入
     }
 
     public static FileManagerController getInstance() {
@@ -174,13 +183,45 @@ public class FileManagerController {
         mainLayout.setCenter(fileViewScrollPane);
 
         // 底部狀態欄
-        statusLabel = new Label("就緒");
-        statusLabel.setPadding(new Insets(5, 10, 5, 10));
-        statusLabel.setStyle("-fx-background-color: #e9ecef; -fx-border-color: #dee2e6; -fx-border-width: 1 0 0 0;");
-        mainLayout.setBottom(statusLabel);
+        HBox bottomBar = createBottomBar();
+        mainLayout.setBottom(bottomBar);
 
         // 套用樣式
         mainLayout.setStyle("-fx-background-color: white;");
+    }
+    
+    /**
+     * 建立底部狀態欄（包含設定按鈕）
+     */
+    private HBox createBottomBar() {
+        HBox bottomBar = new HBox();
+        bottomBar.setAlignment(Pos.CENTER_LEFT);
+        bottomBar.setStyle("-fx-background-color: #e9ecef; -fx-border-color: #dee2e6; -fx-border-width: 1 0 0 0;");
+        
+        // 狀態標籤
+        statusLabel = new Label("就緒");
+        statusLabel.setPadding(new Insets(5, 10, 5, 10));
+        
+        // 在左下角添加設定按鈕
+        Button settingsBtn = new Button("⚙️ OCR設定");
+        settingsBtn.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold; " +
+                            "-fx-padding: 6 12; -fx-font-size: 12px; -fx-background-radius: 4px;");
+        settingsBtn.setTooltip(new Tooltip("OCR文字識別設定"));
+        settingsBtn.setOnAction(e -> showOcrSettingsDialog());
+        
+        // 懸停效果
+        settingsBtn.setOnMouseEntered(e -> 
+            settingsBtn.setStyle(settingsBtn.getStyle() + "; -fx-background-color: #5a6268;"));
+        settingsBtn.setOnMouseExited(e -> 
+            settingsBtn.setStyle(settingsBtn.getStyle().replace("; -fx-background-color: #5a6268", "")));
+        
+        // 使用HBox.setHgrow讓狀態標籤占滿剩餘空間
+        HBox.setHgrow(statusLabel, Priority.ALWAYS);
+        
+        bottomBar.getChildren().addAll(statusLabel, settingsBtn);
+        bottomBar.setPadding(new Insets(0, 10, 0, 0)); // 右邊留一些空間
+        
+        return bottomBar;
     }
 
     private VBox createTopSection() {
@@ -2105,5 +2146,147 @@ public class FileManagerController {
 
     public FileManagerData getFileManagerData() {
         return fileManagerData;
+    }
+    
+    /**
+     * 設定SettingsManager（從MainController傳入）
+     */
+    public void setSettingsManager(SettingsManager settingsManager) {
+        this.settingsManager = settingsManager;
+    }
+    
+    /**
+     * 設定TextExtractor（從MainController傳入）
+     */
+    public void setTextExtractor(TextExtractor textExtractor) {
+        this.textExtractor = textExtractor;
+    }
+    
+    /**
+     * 顯示OCR設定對話框
+     */
+    private void showOcrSettingsDialog() {
+        // 檢查設定管理器是否已初始化
+        if (settingsManager == null || textExtractor == null) {
+            showError("設定錯誤", "設定管理器未初始化，請先開啟主程式。");
+            return;
+        }
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("OCR文字識別設定");
+        dialog.setHeaderText("配置OCR文字識別參數");
+        dialog.initOwner(primaryStage);
+        
+        // 建立設定內容
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        content.setPrefWidth(450);
+        
+        // OCR模型選擇
+        Label ocrModelLabel = new Label("OCR文字識別模型:");
+        ocrModelLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        
+        ComboBox<SettingsManager.OcrModel> ocrModelCombo = new ComboBox<>();
+        ocrModelCombo.getItems().addAll(SettingsManager.OcrModel.values());
+        ocrModelCombo.setValue(settingsManager.getOcrModel());
+        ocrModelCombo.setPrefWidth(300);
+        
+        // OCR模型描述標籤
+        Label ocrDescLabel = new Label(settingsManager.getOcrModel().getDescription());
+        ocrDescLabel.setStyle("-fx-text-fill: #666666; -fx-font-size: 12px; -fx-wrap-text: true;");
+        ocrDescLabel.setPrefWidth(400);
+        ocrDescLabel.setWrapText(true);
+        
+        // 更新OCR描述當選擇改變時
+        ocrModelCombo.setOnAction(e -> {
+            SettingsManager.OcrModel selected = ocrModelCombo.getValue();
+            if (selected != null) {
+                ocrDescLabel.setText(selected.getDescription());
+            }
+        });
+        
+        // OCR狀態顯示
+        Label statusLabel = new Label("當前OCR狀態:");
+        statusLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        
+        String ocrStatus = textExtractor.getOcrStatus();
+        Label ocrStatusLabel = new Label(ocrStatus);
+        ocrStatusLabel.setStyle("-fx-text-fill: " + 
+            (textExtractor.isOcrAvailable() ? "#28a745" : "#dc3545") + 
+            "; -fx-font-size: 12px; -fx-wrap-text: true;");
+        ocrStatusLabel.setPrefWidth(400);
+        ocrStatusLabel.setWrapText(true);
+        
+        // 用法說明
+        Label usageLabel = new Label("使用說明:");
+        usageLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        
+        Label usageText = new Label(
+            "• 快速模型：識別速度快，適合一般用途\n" +
+            "• 最佳模型：識別精度高，適合重要文件\n" +
+            "• 識別效果取決於圖片清晰度和文字大小\n" +
+            "• 識別失敗時會自動嘗試其他模型"
+        );
+        usageText.setStyle("-fx-text-fill: #666666; -fx-font-size: 11px; -fx-wrap-text: true;");
+        usageText.setPrefWidth(400);
+        usageText.setWrapText(true);
+        
+        // 組裝內容
+        content.getChildren().addAll(
+            ocrModelLabel, ocrModelCombo, ocrDescLabel,
+            new Separator(),
+            statusLabel, ocrStatusLabel,
+            new Separator(),
+            usageLabel, usageText
+        );
+        
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        
+        // 設定按鈕樣式
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold;");
+        
+        Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        cancelButton.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
+        
+        // 處理結果
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            SettingsManager.OcrModel newOcrModel = ocrModelCombo.getValue();
+            if (newOcrModel != null && newOcrModel != settingsManager.getOcrModel()) {
+                // 更新設定
+                settingsManager.setOcrModel(newOcrModel);
+                settingsManager.saveSettings();
+                
+                // 更新TextExtractor的模型
+                textExtractor.updateOcrModel(newOcrModel);
+                
+                // 顯示成功訊息
+                statusLabel.setText("OCR設定已更新 - 當前使用: " + newOcrModel.getDisplayName());
+                
+                // 顯示通知對話框
+                showOcrUpdateNotification(newOcrModel);
+            }
+        }
+    }
+    
+    /**
+     * 顯示OCR更新通知
+     */
+    private void showOcrUpdateNotification(SettingsManager.OcrModel newModel) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("OCR設定已更新");
+        alert.setHeaderText("OCR模型已切換");
+        alert.setContentText(
+            "OCR模型已成功切換為: " + newModel.getDisplayName() + "\n\n" +
+            "描述: " + newModel.getDescription() + "\n\n" +
+            "新設定將在下次文字識別時生效。"
+        );
+        alert.initOwner(primaryStage);
+        
+        // 設定對話框樣式
+        alert.getDialogPane().setStyle("-fx-font-family: 'Microsoft JhengHei';");
+        
+        alert.showAndWait();
     }
 }

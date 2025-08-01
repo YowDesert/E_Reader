@@ -7,6 +7,8 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
 
 /**
  * UI控制面板工廠 - 負責創建和管理UI控制元件
@@ -135,18 +137,43 @@ public class UIControlsFactory {
         Button focusModeBtn = createButton("🎯 専注模式", controller::toggleFocusMode);
         Button speedReadBtn = createButton("⚡ 快速閱讀", () -> showSpeedReadingDialog(controller));
         
+        // OCR設定按鈕（位於左下角）
+        Button ocrSettingsBtn = createButton("🔧 OCR設定", () -> showOcrSettingsDialog(controller));
+        ocrSettingsBtn.setStyle(BUTTON_STYLE + "; -fx-background-color: #0078d4;");
+        
         // 創建控制列容器
         bottomControls = new HBox(10);
         bottomControls.setAlignment(Pos.CENTER);
         bottomControls.setPadding(new Insets(10));
         bottomControls.setStyle("-fx-background-color: #333333;");
         
-        // 基本導航按鈕始終顯示
-        bottomControls.getChildren().addAll(
+        // 創建左下角區域放置OCR設定按鈕
+        HBox leftBottomControls = new HBox(10);
+        leftBottomControls.setAlignment(Pos.CENTER_LEFT);
+        leftBottomControls.getChildren().add(ocrSettingsBtn);
+        
+        // 創建右下角區域放置其他按鈕
+        HBox rightBottomControls = new HBox(10);
+        rightBottomControls.setAlignment(Pos.CENTER_RIGHT);
+        rightBottomControls.getChildren().addAll(focusModeBtn, speedReadBtn);
+        
+        // 創建包含基本導航按鈕的中央區域
+        HBox centerBottomControls = new HBox(10);
+        centerBottomControls.setAlignment(Pos.CENTER);
+        centerBottomControls.getChildren().addAll(
             firstPageBtn, prevBtn, nextBtn, lastPageBtn,
-            new Separator(), pageField, goToPageBtn,
-            new Separator(), focusModeBtn, speedReadBtn
+            new Separator(), pageField, goToPageBtn
         );
+        
+        // 使用BorderPane來排列左、中、右三個區域
+        BorderPane bottomLayout = new BorderPane();
+        bottomLayout.setLeft(leftBottomControls);
+        bottomLayout.setCenter(centerBottomControls);
+        bottomLayout.setRight(rightBottomControls);
+        
+        // 將BorderPane包裝在HBox中
+        bottomControls.getChildren().add(bottomLayout);
+        HBox.setHgrow(bottomLayout, Priority.ALWAYS);
         
         return bottomControls;
     }
@@ -158,7 +185,7 @@ public class UIControlsFactory {
         // 更新上方控制列
         updateTopControlsForMode(isTextMode);
         
-        // 更新下方控制列
+        // 更新下方控制列的模式專用按鈕
         updateBottomControlsForMode(isTextMode);
     }
     
@@ -190,34 +217,38 @@ public class UIControlsFactory {
     private void updateBottomControlsForMode(boolean isTextMode) {
         if (bottomControls == null) return;
         
-        // 先移除所有模式專用按鈕和分隔符
-        bottomControls.getChildren().removeAll(
+        // 獲取BorderPane（假設它是bottomControls的第一個子元素）
+        if (bottomControls.getChildren().isEmpty()) return;
+        
+        BorderPane bottomLayout = (BorderPane) bottomControls.getChildren().get(0);
+        HBox centerBottomControls = (HBox) bottomLayout.getCenter();
+        
+        // 先移除所有模式專用按鈕
+        centerBottomControls.getChildren().removeAll(
             zoomInBtn, zoomOutBtn, fitWidthBtn, fitHeightBtn, rotateBtn,
             fontSizeIncBtn, fontSizeDecBtn, lineSpacingBtn
         );
         
-        // 移除多餘的分隔符
-        bottomControls.getChildren().removeIf(node -> 
+        // 移除多餘的分隔符（保留基本的分隔符）
+        centerBottomControls.getChildren().removeIf(node -> 
             node instanceof Separator && 
-            bottomControls.getChildren().indexOf(node) > 4); // 保留前面的基本分隔符
+            centerBottomControls.getChildren().indexOf(node) > 1); // 保留第一個分隔符
         
-        // 在最後的專注模式按鈕前添加新的分隔符和對應模式的按鈕
-        int insertIndex = bottomControls.getChildren().size() - 2; // 在專注模式按鈕前
-        
+        // 根據模式添加相應按鈕
         if (isTextMode) {
             // 文字模式：添加字體和行距控制
-            bottomControls.getChildren().add(insertIndex, new Separator());
-            bottomControls.getChildren().add(insertIndex + 1, fontSizeIncBtn);
-            bottomControls.getChildren().add(insertIndex + 2, fontSizeDecBtn);
-            bottomControls.getChildren().add(insertIndex + 3, lineSpacingBtn);
+            centerBottomControls.getChildren().add(new Separator());
+            centerBottomControls.getChildren().add(fontSizeIncBtn);
+            centerBottomControls.getChildren().add(fontSizeDecBtn);
+            centerBottomControls.getChildren().add(lineSpacingBtn);
         } else {
             // 圖片模式：添加縮放和旋轉控制
-            bottomControls.getChildren().add(insertIndex, new Separator());
-            bottomControls.getChildren().add(insertIndex + 1, zoomInBtn);
-            bottomControls.getChildren().add(insertIndex + 2, zoomOutBtn);
-            bottomControls.getChildren().add(insertIndex + 3, fitWidthBtn);
-            bottomControls.getChildren().add(insertIndex + 4, fitHeightBtn);
-            bottomControls.getChildren().add(insertIndex + 5, rotateBtn);
+            centerBottomControls.getChildren().add(new Separator());
+            centerBottomControls.getChildren().add(zoomInBtn);
+            centerBottomControls.getChildren().add(zoomOutBtn);
+            centerBottomControls.getChildren().add(fitWidthBtn);
+            centerBottomControls.getChildren().add(fitHeightBtn);
+            centerBottomControls.getChildren().add(rotateBtn);
         }
     }
     
@@ -429,6 +460,83 @@ public class UIControlsFactory {
                     controller.toggleAutoScroll(); // 停止自動翻頁
                 }
             }, speed * 1000L);
+        });
+    }
+    
+    /**
+     * 顯示OCR設定對話框
+     */
+    private void showOcrSettingsDialog(MainController controller) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("OCR文字識別設定");
+        dialog.setHeaderText("選擇OCR識別模型");
+        
+        ButtonType okButtonType = new ButtonType("確定", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
+        
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(20));
+        
+        // 當前OCR狀態
+        Label statusLabel = new Label(controller.getTextExtractor().getOcrStatus());
+        statusLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #0078d4;");
+        
+        // OCR模型選擇
+        Label modelLabel = new Label("選擇OCR模型:");
+        ComboBox<E_Reader.settings.SettingsManager.OcrModel> modelCombo = new ComboBox<>();
+        modelCombo.getItems().addAll(E_Reader.settings.SettingsManager.OcrModel.values());
+        modelCombo.setValue(controller.getSettingsManager().getOcrModel());
+        
+        // 模型描述
+        Label descLabel = new Label(controller.getSettingsManager().getOcrModel().getDescription());
+        descLabel.setStyle("-fx-text-fill: #666666; -fx-wrap-text: true;");
+        descLabel.setMaxWidth(300);
+        
+        // 更新描述當選擇改變時
+        modelCombo.setOnAction(e -> {
+            E_Reader.settings.SettingsManager.OcrModel selected = modelCombo.getValue();
+            if (selected != null) {
+                descLabel.setText(selected.getDescription());
+            }
+        });
+        
+        // 模型說明
+        Label infoLabel = new Label("• 快速模型：識別速度快，適合一般閱讀\n• 最佳模型：識別精度高，適合重要文件");
+        infoLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 11px;");
+        
+        // 偵測失敗提醒設定
+        CheckBox showFailuresCheckBox = new CheckBox("顯示文字偵測失敗通知");
+        showFailuresCheckBox.setSelected(true); // 預設開啟
+        
+        content.getChildren().addAll(
+            statusLabel,
+            new Separator(),
+            modelLabel,
+            modelCombo,
+            descLabel,
+            new Separator(),
+            infoLabel,
+            showFailuresCheckBox
+        );
+        
+        dialog.getDialogPane().setContent(content);
+        
+        dialog.showAndWait().ifPresent(result -> {
+            if (result == okButtonType) {
+                E_Reader.settings.SettingsManager.OcrModel newModel = modelCombo.getValue();
+                if (newModel != controller.getSettingsManager().getOcrModel()) {
+                    controller.getSettingsManager().setOcrModel(newModel);
+                    controller.getTextExtractor().updateOcrModel(newModel);
+                    controller.getSettingsManager().saveSettings();
+                    
+                    controller.showNotification("OCR設定已更新", 
+                        "OCR模型已切換為: " + newModel.getDisplayName() + "\n" +
+                        "新設定將在下次文字識別時生效");
+                }
+                
+                // 更新偵測失敗通知設定
+                controller.getTextExtractor().setShowDetectionFailures(showFailuresCheckBox.isSelected());
+            }
         });
     }
 }

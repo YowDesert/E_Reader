@@ -29,6 +29,28 @@ public class SettingsManager {
     private boolean nightMode = false;
     private int nightModeStartHour = 20; // 晚上8點
     private int nightModeEndHour = 7;   // 早上7點
+    
+    // OCR模型設定
+    private OcrModel ocrModel = OcrModel.FAST;
+    
+    public enum OcrModel {
+        FAST("快速模型", "tessdata_fast-4.1.0", "快速識別，適合一般用途"),
+        BEST("最佳模型", "tessdata_best-4.1.0", "高精度識別，適合重要文件");
+        
+        private final String displayName;
+        private final String dataPath;
+        private final String description;
+        
+        OcrModel(String displayName, String dataPath, String description) {
+            this.displayName = displayName;
+            this.dataPath = dataPath;
+            this.description = description;
+        }
+        
+        public String getDisplayName() { return displayName; }
+        public String getDataPath() { return dataPath; }
+        public String getDescription() { return description; }
+    }
 
     public enum ThemeMode {
         LIGHT("淺色模式", "#ffffff", "#000000", "#f5f5f5"),
@@ -74,6 +96,7 @@ public class SettingsManager {
         settings.setProperty("nightMode", "false");
         settings.setProperty("nightModeStartHour", "20");
         settings.setProperty("nightModeEndHour", "7");
+        settings.setProperty("ocrModel", "FAST");
     }
 
     public void loadSettings() {
@@ -114,6 +137,13 @@ public class SettingsManager {
             }
 
             rememberLastFile = Boolean.parseBoolean(settings.getProperty("rememberLastFile", "true"));
+            
+            String ocrModelStr = settings.getProperty("ocrModel", "FAST");
+            try {
+                ocrModel = OcrModel.valueOf(ocrModelStr);
+            } catch (IllegalArgumentException e) {
+                ocrModel = OcrModel.FAST;
+            }
 
         } catch (IOException e) {
             loadDefaultSettings();
@@ -135,6 +165,7 @@ public class SettingsManager {
         settings.setProperty("nightMode", String.valueOf(nightMode));
         settings.setProperty("nightModeStartHour", String.valueOf(nightModeStartHour));
         settings.setProperty("nightModeEndHour", String.valueOf(nightModeEndHour));
+        settings.setProperty("ocrModel", ocrModel.toString());
 
         try (OutputStream output = new FileOutputStream(SETTINGS_FILE)) {
             settings.store(output, "E-Reader Settings");
@@ -226,6 +257,7 @@ public class SettingsManager {
     public boolean isNightMode() { return nightMode; }
     public int getNightModeStartHour() { return nightModeStartHour; }
     public int getNightModeEndHour() { return nightModeEndHour; }
+    public OcrModel getOcrModel() { return ocrModel; }
 
     // Setter 方法
     public void setFitMode(ImageViewer.FitMode fitMode) {
@@ -279,5 +311,9 @@ public class SettingsManager {
     
     public void setNightModeEndHour(int nightModeEndHour) {
         this.nightModeEndHour = nightModeEndHour;
+    }
+    
+    public void setOcrModel(OcrModel ocrModel) {
+        this.ocrModel = ocrModel;
     }
 }
