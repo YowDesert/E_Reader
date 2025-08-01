@@ -319,6 +319,8 @@ public class MainController {
                     stateManager.setFileLoaded(file.getAbsolutePath(), true, false, images, null);
                     switchToImageMode();
                     imageViewer.setImages(images);
+                    // 初始化頁面索引為 0
+                    stateManager.setCurrentImagePageIndex(0);
                     primaryStage.setTitle("E_Reader - " + file.getName());
                     updateUI();
                     resetTextModeButton();
@@ -337,6 +339,8 @@ public class MainController {
                     stateManager.setFileLoaded(file.getAbsolutePath(), false, true, images, null);
                     switchToImageMode();
                     imageViewer.setImages(images);
+                    // 初始化頁面索引為 0
+                    stateManager.setCurrentImagePageIndex(0);
                     primaryStage.setTitle("E_Reader - " + file.getName());
                     updateUI();
                     resetTextModeButton();
@@ -360,6 +364,8 @@ public class MainController {
                     stateManager.setFileLoaded(parentFolder.getAbsolutePath(), false, false, images, null);
                     switchToImageMode();
                     imageViewer.setImages(images);
+                    // 初始化頁面索引為 0
+                    stateManager.setCurrentImagePageIndex(0);
                     
                     // 找到當前檔案的索引並跳轉到該頁
                     String targetFileName = file.getName();
@@ -397,6 +403,8 @@ public class MainController {
                 stateManager.setFileLoaded(folder.getAbsolutePath(), false, false, images, null);
                 switchToImageMode();
                 imageViewer.setImages(images);
+                // 初始化頁面索引為 0
+                stateManager.setCurrentImagePageIndex(0);
                 primaryStage.setTitle("E_Reader - " + folder.getName());
                 updateUI();
                 resetTextModeButton();
@@ -419,6 +427,8 @@ public class MainController {
                     stateManager.setFileLoaded(pdfFile.getAbsolutePath(), true, false, images, null);
                     switchToImageMode();
                     imageViewer.setImages(images);
+                    // 初始化頁面索引為 0
+                    stateManager.setCurrentImagePageIndex(0);
                     primaryStage.setTitle("E_Reader - " + pdfFile.getName());
                     updateUI();
                     resetTextModeButton();
@@ -436,21 +446,38 @@ public class MainController {
             return;
         }
 
+        // 在切換模式前，先保存當前頁面索引
+        int currentPageIndex;
+        if (stateManager.isTextMode()) {
+            // 從文字模式切換到圖片模式
+            currentPageIndex = textRenderer.getCurrentPageIndex();
+            stateManager.setCurrentTextPageIndex(currentPageIndex);
+        } else {
+            // 從圖片模式切換到文字模式
+            currentPageIndex = imageViewer.getCurrentIndex();
+            stateManager.setCurrentImagePageIndex(currentPageIndex);
+        }
+
         boolean isTextMode = !stateManager.isTextMode();
         stateManager.setTextMode(isTextMode);
 
         if (isTextMode) {
             textModeBtn.setText("🖼️ 圖片模式");
             textModeBtn.setStyle(textModeBtn.getStyle() + "; -fx-background-color: #28a745;");
-            switchToTextMode();
+            switchToTextMode(currentPageIndex);
         } else {
             textModeBtn.setText("📖 文字模式");
             textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
-            switchToImageMode();
+            switchToImageMode(currentPageIndex);
         }
     }
 
     private void switchToTextMode() {
+        // 使用默認的當前頁面索引
+        switchToTextMode(stateManager.getCurrentImagePageIndex());
+    }
+    
+    private void switchToTextMode(int targetPageIndex) {
         showLoadingIndicator("正在提取文字內容...");
 
         Thread extractThread = new Thread(() -> {
@@ -479,7 +506,14 @@ public class MainController {
 
                         textRenderer.setPages(textPages);
                         textRenderer.setThemeColors(settingsManager.getCurrentTheme());
-                        showNotification("文字模式", "已成功提取 " + textPages.size() + " 頁文字內容");
+                        
+                        // 跳轉到指定頁面，但要確保不超出範圍
+                        int safePageIndex = Math.min(targetPageIndex, textPages.size() - 1);
+                        safePageIndex = Math.max(0, safePageIndex);
+                        textRenderer.goToPage(safePageIndex);
+                        stateManager.setCurrentTextPageIndex(safePageIndex);
+                        
+                        showNotification("文字模式", "已成功提取 " + textPages.size() + " 頁文字內容\n保持在第 " + (safePageIndex + 1) + " 頁");
                     } else {
                         AlertHelper.showError("文字提取失敗", "無法從檔案中提取文字內容");
                         stateManager.setTextMode(false);
@@ -504,6 +538,11 @@ public class MainController {
     }
 
     private void switchToImageMode() {
+        // 使用默認的當前頁面索引
+        switchToImageMode(stateManager.getCurrentTextPageIndex());
+    }
+    
+    private void switchToImageMode(int targetPageIndex) {
         centerPane.getChildren().clear();
         centerPane.getChildren().addAll(
                 imageViewer.getScrollPane(),
@@ -511,6 +550,16 @@ public class MainController {
                 readingTimeLabel,
                 pageLabel
         );
+        
+        // 跳轉到指定頁面，但要確保不超出範圍
+        if (imageViewer.hasImages()) {
+            int safePageIndex = Math.min(targetPageIndex, imageViewer.getTotalPages() - 1);
+            safePageIndex = Math.max(0, safePageIndex);
+            imageViewer.goToPage(safePageIndex);
+            stateManager.setCurrentImagePageIndex(safePageIndex);
+            showNotification("圖片模式", "已切換到圖片模式\n保持在第 " + (safePageIndex + 1) + " 頁");
+        }
+        
         updateUI();
     }
 
@@ -518,8 +567,10 @@ public class MainController {
     public void goToFirstPage() {
         if (stateManager.isTextMode()) {
             textRenderer.goToPage(0);
+            stateManager.setCurrentTextPageIndex(0);
         } else {
             imageViewer.goToFirstPage();
+            stateManager.setCurrentImagePageIndex(0);
         }
         updateUI();
     }
@@ -528,10 +579,13 @@ public class MainController {
         if (stateManager.isTextMode()) {
             int currentIndex = textRenderer.getCurrentPageIndex();
             if (currentIndex > 0) {
-                textRenderer.goToPage(currentIndex - 1);
+                int newIndex = currentIndex - 1;
+                textRenderer.goToPage(newIndex);
+                stateManager.setCurrentTextPageIndex(newIndex);
             }
         } else {
             imageViewer.prevPage();
+            stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
         }
         updateUI();
     }
@@ -540,19 +594,25 @@ public class MainController {
         if (stateManager.isTextMode()) {
             int currentIndex = textRenderer.getCurrentPageIndex();
             if (currentIndex < textRenderer.getTotalPages() - 1) {
-                textRenderer.goToPage(currentIndex + 1);
+                int newIndex = currentIndex + 1;
+                textRenderer.goToPage(newIndex);
+                stateManager.setCurrentTextPageIndex(newIndex);
             }
         } else {
             imageViewer.nextPage();
+            stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
         }
         updateUI();
     }
 
     public void goToLastPage() {
         if (stateManager.isTextMode()) {
-            textRenderer.goToPage(textRenderer.getTotalPages() - 1);
+            int lastIndex = textRenderer.getTotalPages() - 1;
+            textRenderer.goToPage(lastIndex);
+            stateManager.setCurrentTextPageIndex(lastIndex);
         } else {
             imageViewer.goToLastPage();
+            stateManager.setCurrentImagePageIndex(imageViewer.getTotalPages() - 1);
         }
         updateUI();
     }
@@ -562,8 +622,10 @@ public class MainController {
 
         if (stateManager.isTextMode()) {
             textRenderer.goToPage(pageIndex);
+            stateManager.setCurrentTextPageIndex(pageIndex);
         } else {
             imageViewer.goToPage(pageIndex);
+            stateManager.setCurrentImagePageIndex(pageIndex);
         }
         updateUI();
     }
