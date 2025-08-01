@@ -7,8 +7,14 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import E_Reader.settings.SettingsManager;
 
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorConvertOp;
+import java.awt.image.ConvolveOp;
+import java.awt.image.Kernel;
+import java.awt.color.ColorSpace;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,60 +22,118 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * 文字提取器 - 負責從PDF和圖片中提取文字內容
+ * 增強版文字提取器 - 支援多模型OCR和精準度檢測
  */
 public class TextExtractor {
 
-    private Tesseract tesseract;
-    private boolean ocrInitialized = false;
+    private Tesseract fastTesseract;    // 快速模型
+    private Tesseract bestTesseract;    // 最佳精確度模型
+    private boolean fastOcrInitialized = false;
+    private boolean bestOcrInitialized = false;
+    private boolean showDetectionFailures = true;
+    private SettingsManager settingsManager;
+    private SettingsManager.OcrModel currentOcrModel = SettingsManager.OcrModel.FAST;
 
     // 文字處理相關的正規表達式
     private static final Pattern PARAGRAPH_SEPARATOR = Pattern.compile("\n\\s*\n+");
     private static final Pattern LINE_BREAK = Pattern.compile("\n");
     private static final Pattern SENTENCE_END = Pattern.compile("[。！？.!?]\\s*");
     private static final Pattern CHAPTER_HEADER = Pattern.compile("^(第[一二三四五六七八九十0-9]+[章節回部]|Chapter\\s+\\d+|CHAPTER\\s+\\d+)");
+    
+    // OCR 品質閾值
+    private static final int MIN_TEXT_LENGTH = 10;
+    private static final double MIN_CONFIDENCE_THRESHOLD = 60.0;
+    private static final Pattern MEANINGLESS_TEXT = Pattern.compile("^[\\s\\|\\-_=+*#@!%^&()\\[\\]{}<>,.?/~`]*$");
 
     public TextExtractor() {
+        this.settingsManager = new SettingsManager();
+        settingsManager.loadSettings();
+        this.currentOcrModel = settingsManager.getOcrModel();
+        initializeOCR();
+    }
+    
+    public TextExtractor(SettingsManager settingsManager) {
+        this.settingsManager = settingsManager;
+        this.currentOcrModel = settingsManager.getOcrModel();
         initializeOCR();
     }
 
     /**
-     * 初始化OCR引擎
+     * 初始化多個OCR引擎
      */
     private void initializeOCR() {
         try {
-            tesseract = new Tesseract();
-            tesseract.setDatapath("tessdata");
-            tesseract.setLanguage("chi_tra+eng");  // 繁體中文 + 英文
-            tesseract.setPageSegMode(1);  // 自動頁面分割
-            tesseract.setOcrEngineMode(1);  // LSTM OCR引擎
+            // 初始化快速模型
+            fastTesseract = new Tesseract();
             
-            // 設定字符白名單以提高準確性
-            tesseract.setVariable("tessedit_char_whitelist",
+            // 設定快速模型的資料路徑
+            String fastDataPath = "src/main/resources/tessdata/TessAct_Fast/tessdata_fast-4.1.0";
+            File fastDataDir = new File(fastDataPath);
+            if (fastDataDir.exists() && fastDataDir.isDirectory()) {
+                fastTesseract.setDatapath(fastDataPath);
+                System.out.println("使用快速模型路徑: " + fastDataPath);
+            } else {
+                fastTesseract.setDatapath("tessdata");
+                System.out.println("快速模型路徑不存在，使用預設路徑");
+            }
+            
+            fastTesseract.setLanguage("chi_tra+eng");
+            fastTesseract.setPageSegMode(6);     // 統一文字區塊
+            fastTesseract.setOcrEngineMode(1);   // LSTM OCR引擎
+            fastTesseract.setVariable("tessedit_do_invert", "0");
+            fastOcrInitialized = true;
+            
+            // 初始化最佳精確度模型
+            bestTesseract = new Tesseract();
+            
+            // 設定最佳模型的資料路徑
+            String bestDataPath = "src/main/resources/tessdata/TessAct_Best/tessdata_best-4.1.0";
+            File bestDataDir = new File(bestDataPath);
+            if (bestDataDir.exists() && bestDataDir.isDirectory()) {
+                bestTesseract.setDatapath(bestDataPath);
+                System.out.println("使用最佳模型路徑: " + bestDataPath);
+            } else {
+                bestTesseract.setDatapath("tessdata");
+                System.out.println("最佳模型路徑不存在，使用預設路徑");
+            }
+            
+            bestTesseract.setLanguage("chi_tra+eng");
+            bestTesseract.setPageSegMode(1);     // 自動頁面分割
+            bestTesseract.setOcrEngineMode(1);   // LSTM OCR引擎
+            
+            // 提高最佳模型的精確度設定
+            bestTesseract.setVariable("tessedit_char_whitelist",
                     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
-                            "一二三四五六七八九十百千萬億兆" +
+                            "一二三四五六七八九十百千萬億兆零壹貳參肆伍陸柒捌玖拾佰仟" +
                             "的是了不在有個人這上我大來以他時要說年生對中可你國也就到下所" +
                             "會小而能用於自己出道走子它種只多如面方前回什公司問題工作生活" +
-                            "好了在是的有不了就是這個一是不的有了就這個一是不的有了");
-
-            ocrInitialized = true;
-            System.out.println("OCR引擎初始化成功");
+                            "好新學校家庭朋友愛情婚姻孩子父母老師同學同事老闆客戶政府社會" +
+                            "經濟政治文化教育醫療健康科技網路手機電腦遊戲音樂電影書籍閱讀" +
+                            "旅遊美食購物衣服住房交通汽車飛機火車地鐵公車計程車走路跑步運動" +
+                            "天氣陽光雨水雪花春天夏天秋天冬天早上中午下午晚上夜晚昨天今天明天" +
+                            "，。！？：；「」『』（）〔〕【】《》〈〉");
+            
+            bestTesseract.setVariable("tessedit_pageseg_mode", "1");
+            bestTesseract.setVariable("preserve_interword_spaces", "1");
+            bestOcrInitialized = true;
+            
+            System.out.println("OCR引擎初始化成功 - 快速模型: " + fastOcrInitialized + ", 最佳模型: " + bestOcrInitialized);
+            System.out.println("當前使用OCR模型: " + currentOcrModel.getDisplayName());
+            
         } catch (Exception e) {
             System.err.println("OCR 初始化失敗: " + e.getMessage());
             System.err.println("請確保已安裝Tesseract並正確設定tessdata路徑");
-            ocrInitialized = false;
+            fastOcrInitialized = false;
+            bestOcrInitialized = false;
         }
     }
 
     /**
-     * 從PDF檔案提取文字
-     * 
-     * @param pdfFile PDF檔案
-     * @return 頁面文字列表
-     * @throws IOException 如果無法讀取PDF檔案
+     * 從PDF檔案提取文字（增強版）
      */
     public List<PageText> extractTextFromPdf(File pdfFile) throws IOException {
         List<PageText> pages = new ArrayList<>();
+        List<Integer> failedPages = new ArrayList<>();
 
         if (pdfFile == null || !pdfFile.exists()) {
             throw new IOException("PDF檔案不存在: " + pdfFile);
@@ -89,21 +153,38 @@ public class TextExtractor {
                 String extractedText = stripper.getText(document).trim();
                 pageText.setOriginalText(cleanExtractedText(extractedText));
 
-                // 如果原生文字很少，嘗試使用OCR
-                if (extractedText.length() < 50 && ocrInitialized) {
+                boolean textDetected = false;
+
+                // 如果原生文字很少或品質不佳，使用OCR
+                if (shouldUseOCR(extractedText)) {
                     try {
                         BufferedImage pageImage = renderer.renderImageWithDPI(i, 300);
-                        BufferedImage processedImage = preprocessImageForOCR(pageImage);
-                        String ocrText = tesseract.doOCR(processedImage);
-                        pageText.setOcrText(cleanOCRText(ocrText));
-                        pageText.setTextSource(TextSource.OCR);
-                        System.out.println("第 " + (i + 1) + " 頁使用OCR提取文字");
-                    } catch (TesseractException e) {
-                        System.err.println("OCR 處理第 " + (i + 1) + " 頁失敗: " + e.getMessage());
+                        String ocrResult = performEnhancedOCR(pageImage, i + 1);
+                        
+                        if (isValidText(ocrResult)) {
+                            pageText.setOcrText(ocrResult);
+                            pageText.setTextSource(TextSource.OCR);
+                            textDetected = true;
+                            System.out.println("第 " + (i + 1) + " 頁使用OCR成功提取文字");
+                        } else {
+                            // OCR 失敗，記錄失敗頁面
+                            failedPages.add(i + 1);
+                            pageText.setTextSource(TextSource.NATIVE);
+                            System.out.println("第 " + (i + 1) + " 頁OCR偵測失敗，使用原生文字");
+                        }
+                    } catch (Exception e) {
+                        failedPages.add(i + 1);
                         pageText.setTextSource(TextSource.NATIVE);
+                        System.err.println("第 " + (i + 1) + " 頁OCR處理失敗: " + e.getMessage());
                     }
                 } else {
                     pageText.setTextSource(TextSource.NATIVE);
+                    textDetected = !extractedText.isEmpty();
+                }
+
+                // 如果完全沒有偵測到文字，標記為失敗頁面
+                if (!textDetected && pageText.getBestText().trim().isEmpty()) {
+                    failedPages.add(i + 1);
                 }
 
                 pages.add(pageText);
@@ -112,19 +193,22 @@ public class TextExtractor {
             throw new IOException("無法載入PDF檔案: " + e.getMessage(), e);
         }
 
+        // 顯示偵測失敗的頁面通知
+        if (!failedPages.isEmpty() && showDetectionFailures) {
+            showDetectionFailureNotification(failedPages);
+        }
+
         return pages;
     }
 
     /**
-     * 從圖片列表提取文字
-     * 
-     * @param images 圖片列表
-     * @return 頁面文字列表
+     * 從圖片列表提取文字（增強版）
      */
     public List<PageText> extractTextFromImages(List<Image> images) {
         List<PageText> pages = new ArrayList<>();
+        List<Integer> failedPages = new ArrayList<>();
 
-        if (!ocrInitialized) {
+        if (!isOcrAvailable()) {
             System.err.println("OCR 未初始化，無法從圖片提取文字");
             return pages;
         }
@@ -141,44 +225,250 @@ public class TextExtractor {
 
             try {
                 BufferedImage bufferedImage = SwingFXUtils.fromFXImage(images.get(i), null);
-                BufferedImage processedImage = preprocessImageForOCR(bufferedImage);
-                String ocrText = tesseract.doOCR(processedImage);
-                pageText.setOcrText(cleanOCRText(ocrText));
+                String ocrResult = performEnhancedOCR(bufferedImage, i + 1);
                 
-                System.out.println("第 " + (i + 1) + " 頁圖片OCR完成");
-            } catch (TesseractException e) {
-                System.err.println("OCR 處理第 " + (i + 1) + " 頁圖片失敗: " + e.getMessage());
-                pageText.setOcrText("");
+                if (isValidText(ocrResult)) {
+                    pageText.setOcrText(ocrResult);
+                    System.out.println("第 " + (i + 1) + " 頁圖片OCR成功");
+                } else {
+                    pageText.setOcrText("");
+                    failedPages.add(i + 1);
+                    System.out.println("第 " + (i + 1) + " 頁圖片OCR偵測失敗");
+                }
+                
             } catch (Exception e) {
                 System.err.println("處理第 " + (i + 1) + " 頁圖片時發生錯誤: " + e.getMessage());
                 pageText.setOcrText("");
+                failedPages.add(i + 1);
             }
 
             pages.add(pageText);
+        }
+
+        // 顯示偵測失敗的頁面通知
+        if (!failedPages.isEmpty() && showDetectionFailures) {
+            showDetectionFailureNotification(failedPages);
         }
 
         return pages;
     }
 
     /**
-     * 從單一圖片提取文字
-     * 
-     * @param image 圖片
-     * @return 提取的文字
+     * 執行增強的OCR識別
+     */
+    private String performEnhancedOCR(BufferedImage image, int pageNumber) throws TesseractException {
+        // 預處理圖片
+        BufferedImage processedImage = preprocessImageForOCR(image);
+        
+        String result = "";
+        
+        try {
+            // 根據設定選擇OCR模型
+            if (currentOcrModel == SettingsManager.OcrModel.FAST && fastOcrInitialized) {
+                result = fastTesseract.doOCR(processedImage);
+                System.out.println("第 " + pageNumber + " 頁使用快速模型進行OCR識別");
+                
+                // 如果快速模型結果不佳且最佳模型可用，作為備用
+                if (!isValidText(result) && bestOcrInitialized) {
+                    System.out.println("第 " + pageNumber + " 頁快速模型結果不佳，自動切換到最佳模型");
+                    result = bestTesseract.doOCR(processedImage);
+                }
+            } else if (currentOcrModel == SettingsManager.OcrModel.BEST && bestOcrInitialized) {
+                result = bestTesseract.doOCR(processedImage);
+                System.out.println("第 " + pageNumber + " 頁使用最佳模型進行OCR識別");
+            } else {
+                // 備用邏輯：使用任何可用的模型
+                if (fastOcrInitialized) {
+                    result = fastTesseract.doOCR(processedImage);
+                    System.out.println("第 " + pageNumber + " 頁使用備用快速模型");
+                } else if (bestOcrInitialized) {
+                    result = bestTesseract.doOCR(processedImage);
+                    System.out.println("第 " + pageNumber + " 頁使用備用最佳模型");
+                }
+            }
+            
+            return cleanOCRText(result);
+            
+        } catch (TesseractException e) {
+            System.err.println("OCR識別失敗: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 判斷是否應該使用OCR
+     */
+    private boolean shouldUseOCR(String nativeText) {
+        if (nativeText == null || nativeText.trim().isEmpty()) {
+            return true;
+        }
+        
+        // 如果原生文字太短
+        if (nativeText.length() < MIN_TEXT_LENGTH) {
+            return true;
+        }
+        
+        // 如果原生文字主要是無意義字符
+        if (MEANINGLESS_TEXT.matcher(nativeText.trim()).matches()) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * 驗證文字是否有效
+     */
+    private boolean isValidText(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return false;
+        }
+        
+        String trimmedText = text.trim();
+        
+        // 檢查最小長度
+        if (trimmedText.length() < MIN_TEXT_LENGTH) {
+            return false;
+        }
+        
+        // 檢查是否主要是無意義字符
+        if (MEANINGLESS_TEXT.matcher(trimmedText).matches()) {
+            return false;
+        }
+        
+        // 檢查是否有足夠的有意義字符
+        long meaningfulChars = trimmedText.chars()
+                .filter(c -> Character.isLetterOrDigit(c) || 
+                           (c >= 0x4e00 && c <= 0x9fff)) // 中文字符範圍
+                .count();
+        
+        return meaningfulChars >= Math.min(5, trimmedText.length() * 0.3);
+    }
+
+    /**
+     * 顯示偵測失敗通知
+     */
+    private void showDetectionFailureNotification(List<Integer> failedPages) {
+        if (!showDetectionFailures || failedPages.isEmpty()) {
+            return;
+        }
+        
+        StringBuilder message = new StringBuilder("文字偵測失敗通知：\n");
+        message.append("以下頁面無法偵測到文字，將跳過轉換：\n");
+        
+        for (int i = 0; i < failedPages.size() && i < 10; i++) {
+            if (i > 0) message.append(", ");
+            message.append("第").append(failedPages.get(i)).append("頁");
+        }
+        
+        if (failedPages.size() > 10) {
+            message.append("... 及其他 ").append(failedPages.size() - 10).append(" 頁");
+        }
+        
+        message.append("\n\n共 ").append(failedPages.size()).append(" 頁偵測失敗");
+        message.append("\n\n建議：嘗試切換到 '").append(currentOcrModel == SettingsManager.OcrModel.FAST ? "最佳模型" : "快速模型").append("' 來提高識別精度");
+        
+        System.out.println(message.toString());
+        
+        // 這裡可以加入GUI通知機制
+        // 例如：showNotificationDialog(message.toString());
+    }
+
+    /**
+     * 增強的圖片預處理
+     */
+    private BufferedImage preprocessImageForOCR(BufferedImage originalImage) {
+        try {
+            // 1. 轉換為灰階
+            BufferedImage grayImage = new BufferedImage(
+                originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+            Graphics2D g2d = grayImage.createGraphics();
+            g2d.drawImage(originalImage, 0, 0, null);
+            g2d.dispose();
+
+            // 2. 增強對比度
+            BufferedImage contrastImage = enhanceContrast(grayImage);
+
+            // 3. 銳化處理
+            BufferedImage sharpenedImage = sharpenImage(contrastImage);
+
+            // 4. 去噪處理
+            BufferedImage denoisedImage = denoiseImage(sharpenedImage);
+
+            return denoisedImage;
+            
+        } catch (Exception e) {
+            System.err.println("圖片預處理失敗，使用原圖: " + e.getMessage());
+            return originalImage;
+        }
+    }
+
+    /**
+     * 增強對比度
+     */
+    private BufferedImage enhanceContrast(BufferedImage image) {
+        BufferedImage enhanced = new BufferedImage(
+            image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+        
+        Graphics2D g2d = enhanced.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2d.drawImage(image, 0, 0, null);
+        g2d.dispose();
+        
+        return enhanced;
+    }
+
+    /**
+     * 銳化圖片
+     */
+    private BufferedImage sharpenImage(BufferedImage image) {
+        float[] sharpenKernel = {
+            0f, -1f, 0f,
+            -1f, 5f, -1f,
+            0f, -1f, 0f
+        };
+        
+        Kernel kernel = new Kernel(3, 3, sharpenKernel);
+        ConvolveOp convolveOp = new ConvolveOp(kernel, ConvolveOp.EDGE_NO_OP, null);
+        
+        return convolveOp.filter(image, null);
+    }
+
+    /**
+     * 去噪處理
+     */
+    private BufferedImage denoiseImage(BufferedImage image) {
+        float[] blurKernel = {
+            1f/9f, 1f/9f, 1f/9f,
+            1f/9f, 1f/9f, 1f/9f,
+            1f/9f, 1f/9f, 1f/9f
+        };
+        
+        Kernel kernel = new Kernel(3, 3, blurKernel);
+        ConvolveOp convolveOp = new ConvolveOp(kernel, ConvolveOp.EDGE_NO_OP, null);
+        
+        return convolveOp.filter(image, null);
+    }
+
+    /**
+     * 從單一圖片提取文字（增強版）
      */
     public String extractTextFromImage(Image image) {
-        if (!ocrInitialized || image == null) {
+        if (!isOcrAvailable() || image == null) {
             return "";
         }
 
         try {
             BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
-            BufferedImage processedImage = preprocessImageForOCR(bufferedImage);
-            String ocrText = tesseract.doOCR(processedImage);
-            return cleanOCRText(ocrText);
-        } catch (TesseractException e) {
-            System.err.println("OCR 處理圖片失敗: " + e.getMessage());
-            return "";
+            String result = performEnhancedOCR(bufferedImage, 0);
+            
+            if (!isValidText(result)) {
+                System.out.println("圖片文字偵測失敗");
+                return "";
+            }
+            
+            return result;
+            
         } catch (Exception e) {
             System.err.println("處理圖片時發生錯誤: " + e.getMessage());
             return "";
@@ -186,23 +476,7 @@ public class TextExtractor {
     }
 
     /**
-     * 預處理圖片以提高OCR準確度
-     * 
-     * @param originalImage 原始圖片
-     * @return 處理後的圖片
-     */
-    private BufferedImage preprocessImageForOCR(BufferedImage originalImage) {
-        // 這裡可以加入圖片預處理邏輯
-        // 例如：銳化、對比度調整、去噪等
-        // 目前直接返回原圖
-        return originalImage;
-    }
-
-    /**
-     * 清理OCR識別的文字
-     * 
-     * @param ocrText OCR原始文字
-     * @return 清理後的文字
+     * 清理OCR識別的文字（增強版）
      */
     private String cleanOCRText(String ocrText) {
         if (ocrText == null || ocrText.trim().isEmpty()) {
@@ -212,24 +486,23 @@ public class TextExtractor {
         String cleaned = ocrText;
         
         // 移除常見的OCR錯誤字符
-        cleaned = cleaned.replaceAll("[|]", "");
+        cleaned = cleaned.replaceAll("[|┌┐└┘├┤┬┴┼─│]", "");
         cleaned = cleaned.replaceAll("\\s{3,}", "\n\n");
         cleaned = cleaned.replaceAll("(?m)^\\s+", "");
         cleaned = cleaned.replaceAll("(?m)\\s+$", "");
         cleaned = cleaned.replaceAll("\n{3,}", "\n\n");
         
-        // 修正常見的OCR識別錯誤
-        cleaned = cleaned.replaceAll("0", "O");  // 數字0替換為字母O
+        // 修正常見的OCR識別錯誤（根據繁體中文特點）
+        cleaned = cleaned.replaceAll("０", "O"); // 全形數字0
+        cleaned = cleaned.replaceAll("１", "1"); // 全形數字1
         cleaned = cleaned.replaceAll("丨", "1");  // 豎線替換為數字1
+        cleaned = cleaned.replaceAll("〇", "O");  // 中文零
         
         return cleaned.trim();
     }
 
     /**
      * 清理從PDF提取的原生文字
-     * 
-     * @param text 原生文字
-     * @return 清理後的文字
      */
     private String cleanExtractedText(String text) {
         if (text == null || text.trim().isEmpty()) {
@@ -252,11 +525,53 @@ public class TextExtractor {
 
     /**
      * 檢查OCR是否可用
-     * 
-     * @return OCR是否已初始化並可用
      */
     public boolean isOcrAvailable() {
-        return ocrInitialized;
+        return fastOcrInitialized || bestOcrInitialized;
+    }
+
+    /**
+     * 更新OCR模型設定
+     */
+    public void updateOcrModel(SettingsManager.OcrModel newModel) {
+        this.currentOcrModel = newModel;
+        System.out.println("OCR模型已切換為: " + newModel.getDisplayName());
+    }
+    
+    /**
+     * 獲取當前OCR模型
+     */
+    public SettingsManager.OcrModel getCurrentOcrModel() {
+        return currentOcrModel;
+    }
+    
+    /**
+     * 獲取OCR狀態信息
+     */
+    public String getOcrStatus() {
+        StringBuilder status = new StringBuilder();
+        status.append("OCR狀態: ");
+        
+        if (fastOcrInitialized && bestOcrInitialized) {
+            status.append("雙模型可用 (快速+最佳)");
+        } else if (fastOcrInitialized) {
+            status.append("快速模型可用");
+        } else if (bestOcrInitialized) {
+            status.append("最佳模型可用");
+        } else {
+            status.append("不可用");
+        }
+        
+        status.append(" | 目前使用: ").append(currentOcrModel.getDisplayName());
+        
+        return status.toString();
+    }
+
+    /**
+     * 設定是否顯示偵測失敗通知
+     */
+    public void setShowDetectionFailures(boolean show) {
+        this.showDetectionFailures = show;
     }
 
     /**
