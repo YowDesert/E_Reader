@@ -29,6 +29,10 @@ public class StateManager {
     private long readingStartTime;
     private long totalReadingTime = 0;
     
+    // 頁面狀態 - 用於記住當前頁面
+    private int currentImagePageIndex = 0;
+    private int currentTextPageIndex = 0;
+    
     public StateManager() {
         this.readingStartTime = System.currentTimeMillis();
     }
@@ -42,6 +46,9 @@ public class StateManager {
         this.isTextMode = false; // 初始為圖片模式
         this.currentImages = images;
         this.currentTextPages = textPages;
+        // 重置頁面索引
+        this.currentImagePageIndex = 0;
+        this.currentTextPageIndex = 0;
     }
     
     public void clearFileState() {
@@ -51,6 +58,9 @@ public class StateManager {
         this.isTextMode = false;
         this.currentImages = null;
         this.currentTextPages = null;
+        // 重置頁面索引
+        this.currentImagePageIndex = 0;
+        this.currentTextPageIndex = 0;
     }
     
     public void clearCurrentFile() {
@@ -174,5 +184,40 @@ public class StateManager {
     // 檢查是否可以進行文字模式切換
     public boolean canSwitchToTextMode() {
         return hasLoadedContent();
+    }
+    
+    // 頁面索引管理
+    public int getCurrentImagePageIndex() {
+        return currentImagePageIndex;
+    }
+    
+    public void setCurrentImagePageIndex(int currentImagePageIndex) {
+        this.currentImagePageIndex = currentImagePageIndex;
+    }
+    
+    public int getCurrentTextPageIndex() {
+        return currentTextPageIndex;
+    }
+    
+    public void setCurrentTextPageIndex(int currentTextPageIndex) {
+        this.currentTextPageIndex = currentTextPageIndex;
+    }
+    
+    /**
+     * 獲取當前模式下的頁面索引
+     */
+    public int getCurrentPageIndex() {
+        return isTextMode ? currentTextPageIndex : currentImagePageIndex;
+    }
+    
+    /**
+     * 設置當前模式下的頁面索引
+     */
+    public void setCurrentPageIndex(int pageIndex) {
+        if (isTextMode) {
+            currentTextPageIndex = pageIndex;
+        } else {
+            currentImagePageIndex = pageIndex;
+        }
     }
 }
