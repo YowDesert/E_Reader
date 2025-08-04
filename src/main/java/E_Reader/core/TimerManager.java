@@ -6,7 +6,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * 計時器管理器 - 管理各種計時功能
+ * 計時器管理器 - 管理各種計時功能 - 修復版本
  */
 public class TimerManager {
 
@@ -36,8 +36,8 @@ public class TimerManager {
 
     /**
      * 啟動閱讀時間計時器
-     * 
-     * @param callback 回調函數，每秒執行一次
+     *
+     * @param callback 回呼函式，每秒執行一次
      */
     public void startReadingTimer(Runnable callback) {
         if (isReadingTimerRunning) {
@@ -52,9 +52,32 @@ public class TimerManager {
             }
         };
 
-        readingTimerInstance.scheduleAtFixedRate(readingTimerTask, 
+        readingTimerInstance.scheduleAtFixedRate(readingTimerTask,
                 READING_TIMER_INTERVAL, READING_TIMER_INTERVAL);
         isReadingTimerRunning = true;
+    }
+
+    /**
+     * 啟動自訂間隔的自動翻頁計時器
+     *
+     * @param action 回呼函式
+     * @param intervalMillis 間隔時間（毫秒）
+     */
+    public void startAutoScrollWithInterval(Runnable action, long intervalMillis) {
+        stopAutoScroll(); // 先停止現有的自動翻頁
+
+        autoScrollInstance = new Timer("AutoScroll-Custom", true);
+        autoScrollTask = new TimerTask() {
+            @Override
+            public void run() {
+                Platform.runLater(action);
+            }
+        };
+
+        autoScrollInstance.scheduleAtFixedRate(autoScrollTask, intervalMillis, intervalMillis);
+        isAutoScrollRunning = true;
+
+        System.out.println("已啟動自訂間隔自動翻頁: " + intervalMillis + "ms");
     }
 
     /**
@@ -75,8 +98,8 @@ public class TimerManager {
 
     /**
      * 啟動護眼提醒計時器
-     * 
-     * @param callback 回調函數，每30分鐘執行一次
+     *
+     * @param callback 回呼函式，每30分鐘執行一次
      */
     public void startEyeCareReminder(Runnable callback) {
         if (isEyeCareReminderRunning) {
@@ -91,7 +114,7 @@ public class TimerManager {
             }
         };
 
-        eyeCareReminderInstance.scheduleAtFixedRate(eyeCareReminderTask, 
+        eyeCareReminderInstance.scheduleAtFixedRate(eyeCareReminderTask,
                 EYE_CARE_REMINDER_INTERVAL, EYE_CARE_REMINDER_INTERVAL);
         isEyeCareReminderRunning = true;
     }
@@ -114,34 +137,11 @@ public class TimerManager {
 
     /**
      * 啟動自動翻頁計時器（預設間隔）
-     * 
-     * @param callback 回調函數，每3秒執行一次
+     *
+     * @param callback 回呼函式，每3秒執行一次
      */
     public void startAutoScroll(Runnable callback) {
         startAutoScrollWithInterval(callback, AUTO_SCROLL_INTERVAL);
-    }
-
-    /**
-     * 啟動自動翻頁計時器（自訂間隔）
-     * 
-     * @param callback 回調函數
-     * @param intervalMs 間隔時間（毫秒）
-     */
-    public void startAutoScrollWithInterval(Runnable callback, long intervalMs) {
-        if (isAutoScrollRunning) {
-            stopAutoScroll();
-        }
-
-        autoScrollInstance = new Timer("AutoScroll", true);
-        autoScrollTask = new TimerTask() {
-            @Override
-            public void run() {
-                Platform.runLater(callback);
-            }
-        };
-
-        autoScrollInstance.scheduleAtFixedRate(autoScrollTask, intervalMs, intervalMs);
-        isAutoScrollRunning = true;
     }
 
     /**
@@ -207,8 +207,8 @@ public class TimerManager {
     }
 
     /**
-     * 獲取所有計時器狀態
-     * 
+     * 取得所有計時器狀態
+     *
      * @return 狀態描述字串
      */
     public String getTimerStatus() {
@@ -225,14 +225,14 @@ public class TimerManager {
      */
     public void resetAllTimers() {
         stopAllTimers();
-        
+
         // 清理資源
         System.gc(); // 建議垃圾回收
     }
 
     /**
      * 檢查是否有任何計時器在運行
-     * 
+     *
      * @return 如果有任何計時器在運行則返回true
      */
     public boolean hasActiveTimer() {
@@ -241,7 +241,7 @@ public class TimerManager {
 
     /**
      * 安全地取消計時器任務
-     * 
+     *
      * @param task 要取消的任務
      */
     private void safelyCancelTask(TimerTask task) {
@@ -256,7 +256,7 @@ public class TimerManager {
 
     /**
      * 安全地取消並清理計時器
-     * 
+     *
      * @param timer 要清理的計時器
      */
     private void safelyCleanupTimer(Timer timer) {
@@ -271,9 +271,9 @@ public class TimerManager {
     }
 
     /**
-     * 創建延遲任務
-     * 
-     * @param callback 回調函數
+     * 建立延遲任務
+     *
+     * @param callback 回呼函式
      * @param delayMs 延遲時間（毫秒）
      * @return 計時器任務
      */
@@ -288,54 +288,54 @@ public class TimerManager {
                 });
             }
         };
-        
+
         delayTimer.schedule(delayTask, delayMs);
         return delayTask;
     }
 
     /**
-     * 創建重複任務
-     * 
-     * @param callback 回調函數
+     * 建立重複任務
+     *
+     * @param callback 回呼函式
      * @param intervalMs 間隔時間（毫秒）
      * @param maxExecutions 最大執行次數，-1表示無限制
      * @return 計時器實例
      */
     public Timer createRepeatingTask(Runnable callback, long intervalMs, int maxExecutions) {
         Timer repeatingTimer = new Timer("RepeatingTask", true);
-        
+
         TimerTask repeatingTask = new TimerTask() {
             private int executionCount = 0;
-            
+
             @Override
             public void run() {
                 if (maxExecutions > 0 && executionCount >= maxExecutions) {
                     repeatingTimer.cancel();
                     return;
                 }
-                
+
                 Platform.runLater(callback);
                 executionCount++;
             }
         };
-        
+
         repeatingTimer.scheduleAtFixedRate(repeatingTask, intervalMs, intervalMs);
         return repeatingTimer;
     }
 
     /**
      * 設定護眼提醒間隔時間
-     * 
-     * @param callback 回調函數
+     *
+     * @param callback 回呼函式
      * @param intervalMinutes 間隔時間（分鐘）
      */
     public void setEyeCareReminderInterval(Runnable callback, int intervalMinutes) {
         if (isEyeCareReminderRunning) {
             stopEyeCareReminder();
         }
-        
+
         long intervalMs = intervalMinutes * 60 * 1000L;
-        
+
         eyeCareReminderInstance = new Timer("EyeCareReminder", true);
         eyeCareReminderTask = new TimerTask() {
             @Override
@@ -343,7 +343,7 @@ public class TimerManager {
                 Platform.runLater(callback);
             }
         };
-        
+
         eyeCareReminderInstance.scheduleAtFixedRate(eyeCareReminderTask, intervalMs, intervalMs);
         isEyeCareReminderRunning = true;
     }

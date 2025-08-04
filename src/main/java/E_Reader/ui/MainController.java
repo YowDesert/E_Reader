@@ -25,6 +25,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
+import javafx.animation.*;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.paint.Color;
+import javafx.stage.Screen;
+import javafx.stage.StageStyle;
+import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 
 /**
  * 主控制器類 - 負責協調各個組件間的交互
@@ -62,10 +69,14 @@ public class MainController {
     private Button autoScrollBtn;
     private Button nightModeBtn;
     private Button eyeCareBtn;
-    private Button toggleNavBarBtn; // 新增：導覽列切換按鈕
+    private Button toggleNavBarBtn;
+    private Button focusModeBtn;
     private ProgressBar readingProgressBar;
     private Label readingTimeLabel;
-    
+
+    // 專注模式狀態
+    private boolean isFocusMode = false;
+
     // 導覽列控制器
     private NavigationBarController navBarController;
 
@@ -80,9 +91,7 @@ public class MainController {
         this.epubLoader = new EpubLoader();
         this.bookmarkManager = new BookmarkManager();
         this.settingsManager = new SettingsManager();
-        // 修正：使用settingsManager初始化textExtractor
         this.textExtractor = new TextExtractor(settingsManager);
-        // 修正：使用單一 Stage 實例來避免重複創建
         this.fileManagerController = FileManagerController.getInstance();
 
         // 初始化管理器
@@ -92,7 +101,7 @@ public class MainController {
 
         // 載入設定
         settingsManager.loadSettings();
-        
+
         // 初始化檔案管理器
         initializeFileManager();
     }
@@ -109,7 +118,7 @@ public class MainController {
                 showNotification("護眼提醒", "您已經閱讀30分鐘了，建議休息5-10分鐘！"));
 
         setupWindowCloseHandler();
-        
+
         // 如果設定要求記住最後檔案，嘗試載入
         if (settingsManager.isRememberLastFile()) {
             loadLastReadingPosition();
@@ -118,7 +127,16 @@ public class MainController {
 
     private void setupMainLayout() {
         mainLayout = new BorderPane();
-        mainLayout.setStyle("-fx-background-color: #2b2b2b;");
+
+        // iOS風格的漸層背景 - 深色毛玻璃效果
+        mainLayout.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, " +
+                        "rgba(16,16,16,0.98) 0%, " +
+                        "rgba(28,28,28,0.95) 30%, " +
+                        "rgba(20,20,20,0.98) 70%, " +
+                        "rgba(12,12,12,0.99) 100%); " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 25, 0, 0, 0);"
+        );
 
         centerPane = createCenterPane();
         mainLayout.setCenter(centerPane);
@@ -126,52 +144,472 @@ public class MainController {
         createControlPanels();
         controlsContainer = new VBox();
         controlsContainer.getChildren().addAll(topControls, bottomControls);
+
+        // iOS風格的陰影效果
+        controlsContainer.setStyle(
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 20, 0, 0, 5);"
+        );
+
         mainLayout.setTop(controlsContainer);
-        
+
         // 初始化導覽列控制器
         navBarController = new NavigationBarController(controlsContainer, primaryStage, centerPane);
 
         Scene scene = new Scene(mainLayout, 1200, 800);
-        scene.getRoot().setStyle("-fx-font-family: 'Microsoft JhengHei', sans-serif;");
+        scene.getRoot().setStyle(
+                "-fx-font-family: 'SF Pro Display', '.SF NS Text', 'Helvetica Neue', " +
+                        "'PingFang SC', 'Microsoft JhengHei UI', 'Segoe UI', 'Noto Sans CJK TC', sans-serif; " +
+                        "-fx-font-smoothing-type: lcd; " +
+                        "-fx-font-weight: 400;"
+        );
 
         primaryStage.setScene(scene);
-        primaryStage.setTitle("E_Reader 漫畫＆PDF閱讀器 v3.0 Enhanced");
+        primaryStage.setTitle("📚 E-Reader Pro · 現代化閱讀體驗");
+
+        try {
+            primaryStage.getIcons().add(new javafx.scene.image.Image(
+                    getClass().getResourceAsStream("/icons/app-icon.png")
+            ));
+        } catch (Exception e) {
+            // 如果找不到圖示檔案，就忽略
+        }
     }
 
     private StackPane createCenterPane() {
         StackPane centerPane = new StackPane();
         centerPane.getChildren().add(imageViewer.getScrollPane());
 
-        // 閱讀進度條
+        // iOS風格閱讀進度條 - 更細緻的設計
         readingProgressBar = new ProgressBar(0);
-        readingProgressBar.setPrefWidth(300);
-        readingProgressBar.setStyle("-fx-accent: #0078d4;");
+        readingProgressBar.setPrefWidth(280);
+        readingProgressBar.setPrefHeight(3);
+        readingProgressBar.setStyle(
+                "-fx-accent: linear-gradient(to right, #1abc9c, #3498db); " +
+                        "-fx-background-color: rgba(255,255,255,0.1); " +
+                        "-fx-background-radius: 1.5; " +
+                        "-fx-background-insets: 0; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(26,188,156,0.4), 6, 0, 0, 1);"
+        );
         StackPane.setAlignment(readingProgressBar, Pos.BOTTOM_CENTER);
-        StackPane.setMargin(readingProgressBar, new Insets(0, 0, 20, 0));
+        StackPane.setMargin(readingProgressBar, new Insets(0, 0, 25, 0));
         centerPane.getChildren().add(readingProgressBar);
 
-        // 閱讀時間顯示
+        // iOS風格閱讀時間標籤 - 毛玻璃效果
         readingTimeLabel = new Label("閱讀時間: 00:00:00");
-        readingTimeLabel.setStyle("-fx-text-fill: white; -fx-background-color: rgba(0,0,0,0.7); " +
-                "-fx-padding: 5 10 5 10; -fx-background-radius: 15;");
+        readingTimeLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.95); " +
+                        "-fx-background-color: linear-gradient(to right, " +
+                        "rgba(26,188,156,0.3), rgba(52,152,219,0.3)); " +
+                        "-fx-border-color: rgba(255,255,255,0.2); " +
+                        "-fx-border-width: 0.5; " +
+                        "-fx-border-radius: 15; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-padding: 8 16 8 16; " +
+                        "-fx-font-size: 11px; " +
+                        "-fx-font-weight: 500; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);"
+        );
         StackPane.setAlignment(readingTimeLabel, Pos.TOP_RIGHT);
         StackPane.setMargin(readingTimeLabel, new Insets(20, 20, 0, 0));
         centerPane.getChildren().add(readingTimeLabel);
-        
-        // 頁碼標籤 - 放在右下角
+
+        // iOS風格頁碼標籤 - 右下角圓角設計
         pageLabel = new Label("頁面: 0 / 0");
-        pageLabel.setStyle("-fx-text-fill: white; -fx-background-color: rgba(0,0,0,0.7); " +
-                "-fx-padding: 5 10 5 10; -fx-background-radius: 15; -fx-font-size: 14px;");
+        pageLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.95); " +
+                        "-fx-background-color: linear-gradient(to right, " +
+                        "rgba(52,152,219,0.3), rgba(155,89,182,0.3)); " +
+                        "-fx-border-color: rgba(255,255,255,0.2); " +
+                        "-fx-border-width: 0.5; " +
+                        "-fx-border-radius: 15; " +
+                        "-fx-background-radius: 15; " +
+                        "-fx-padding: 8 16 8 16; " +
+                        "-fx-font-size: 11px; " +
+                        "-fx-font-weight: 500; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);"
+        );
         StackPane.setAlignment(pageLabel, Pos.BOTTOM_RIGHT);
-        StackPane.setMargin(pageLabel, new Insets(0, 20, 20, 0));
+        StackPane.setMargin(pageLabel, new Insets(0, 20, 25, 0));
         centerPane.getChildren().add(pageLabel);
 
-        centerPane.setStyle("-fx-background-color: #1e1e1e;");
+        // iOS風格專注模式提示標籤 - 更精緻的設計
+        Label focusModeLabel = new Label("🎯 專注模式 · 按 F 或點擊中央退出");
+        focusModeLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.95);" +
+                        "-fx-background-color: linear-gradient(to right, " +
+                        "rgba(155,89,182,0.4), rgba(142,68,173,0.4));" +
+                        "-fx-border-color: rgba(255,255,255,0.3);" +
+                        "-fx-border-width: 0.5;" +
+                        "-fx-border-radius: 20;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-padding: 12 24 12 24;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-font-weight: 500;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(155,89,182,0.5), 15, 0, 0, 3);"
+        );
+        focusModeLabel.setVisible(false);
+        focusModeLabel.setId("focusModeLabel");
+        StackPane.setAlignment(focusModeLabel, Pos.TOP_CENTER);
+        StackPane.setMargin(focusModeLabel, new Insets(30, 0, 0, 0));
+        centerPane.getChildren().add(focusModeLabel);
+
+        // iOS風格背景
+        centerPane.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, " +
+                        "rgba(18,18,18,0.98) 0%, " +
+                        "rgba(25,25,25,0.95) 100%);"
+        );
+
         return centerPane;
     }
 
+    /**
+     * 初始化檔案管理器
+     */
+    private void initializeFileManager() {
+        fileManagerController.setSettingsManager(settingsManager);
+        fileManagerController.setTextExtractor(textExtractor);
+        fileManagerController.initialize(this::openFileFromManager);
+    }
+
+    /**
+     * 開啟檔案管理器
+     */
+    public void showFileManager() {
+        if (!stateManager.getCurrentFilePath().isEmpty()) {
+            closeCurrentFile();
+        }
+
+        if (isFocusMode) {
+            isFocusMode = false;
+            exitFocusMode();
+        }
+
+        fileManagerController.show();
+    }
+
+    /**
+     * 從檔案管理器開啟檔案
+     */
+    private void openFileFromManager(File file) {
+        if (file == null || !file.exists()) {
+            AlertHelper.showError("錯誤", "檔案不存在或已被移動");
+            return;
+        }
+
+        String fileName = file.getName().toLowerCase();
+
+        if (fileName.endsWith(".pdf")) {
+            openPdfFromFile(file);
+        } else if (fileName.endsWith(".epub")) {
+            openEpubFromFile(file);
+        } else if (isImageFile(fileName)) {
+            openImageFromFile(file);
+        } else {
+            AlertHelper.showError("不支援的檔案格式",
+                    "支援的格式：PDF檔案、EPUB檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
+        }
+    }
+
+    private boolean isImageFile(String fileName) {
+        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+                fileName.endsWith(".png") || fileName.endsWith(".gif") ||
+                fileName.endsWith(".bmp");
+    }
+
+    private void openPdfFromFile(File file) {
+        try {
+            List<Image> images = pdfLoader.loadImagesFromPdf(file);
+            if (!images.isEmpty()) {
+                stateManager.setFileLoaded(file.getAbsolutePath(), true, false, images, null);
+                //測試亂打
+                switchToImageMode(0);
+                imageViewer.setImages(images);
+                stateManager.setCurrentImagePageIndex(0);
+                primaryStage.setTitle("E_Reader - " + file.getName());
+                updateUI();
+                resetTextModeButton();
+
+                showNotification("檔案開啟", "成功開啟 PDF檔案: " + file.getName());
+            }
+        } catch (Exception ex) {
+            AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
+        }
+    }
+
+    private void openEpubFromFile(File file) {
+        try {
+            List<Image> images = epubLoader.loadImagesFromEpub(file);
+            if (!images.isEmpty()) {
+                stateManager.setFileLoaded(file.getAbsolutePath(), false, true, images, null);
+                switchToImageMode(0);
+                imageViewer.setImages(images);
+                stateManager.setCurrentImagePageIndex(0);
+                primaryStage.setTitle("E_Reader - " + file.getName());
+                updateUI();
+                resetTextModeButton();
+
+                showNotification("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
+            } else {
+                AlertHelper.showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
+            }
+        } catch (Exception ex) {
+            AlertHelper.showError("無法載入 EPUB 檔案", ex.getMessage());
+        }
+    }
+
+    private void openImageFromFile(File file) {
+        File parentFolder = file.getParentFile();
+        if (parentFolder != null) {
+            List<Image> images = imageLoader.loadImagesFromFolder(parentFolder);
+            if (!images.isEmpty()) {
+                stateManager.setFileLoaded(parentFolder.getAbsolutePath(), false, false, images, null);
+                switchToImageMode(0);
+                imageViewer.setImages(images);
+                stateManager.setCurrentImagePageIndex(0);
+
+                primaryStage.setTitle("E_Reader - " + parentFolder.getName());
+                updateUI();
+                resetTextModeButton();
+
+                showNotification("檔案開啟", "成功載入圖片資料夾: " + parentFolder.getName());
+            } else {
+                AlertHelper.showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
+            }
+        }
+    }
+
+    // 文件操作方法
+    public void openImageFolder() {
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("選擇圖片資料夾");
+        File folder = dc.showDialog(primaryStage);
+
+        if (folder != null) {
+            List<Image> images = imageLoader.loadImagesFromFolder(folder);
+            if (!images.isEmpty()) {
+                stateManager.setFileLoaded(folder.getAbsolutePath(), false, false, images, null);
+                switchToImageMode(0);
+                imageViewer.setImages(images);
+                stateManager.setCurrentImagePageIndex(0);
+                primaryStage.setTitle("E_Reader - " + folder.getName());
+                updateUI();
+                resetTextModeButton();
+            } else {
+                AlertHelper.showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
+            }
+        }
+    }
+
+    public void openPdfFile() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("選擇 PDF 檔案");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
+        File pdfFile = fc.showOpenDialog(primaryStage);
+
+        if (pdfFile != null) {
+            try {
+                List<Image> images = pdfLoader.loadImagesFromPdf(pdfFile);
+                if (!images.isEmpty()) {
+                    stateManager.setFileLoaded(pdfFile.getAbsolutePath(), true, false, images, null);
+                    switchToImageMode(0);
+                    imageViewer.setImages(images);
+                    stateManager.setCurrentImagePageIndex(0);
+                    primaryStage.setTitle("E_Reader - " + pdfFile.getName());
+                    updateUI();
+                    resetTextModeButton();
+                }
+            } catch (Exception ex) {
+                AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
+            }
+        }
+    }
+
+    // 模式切換方法
+    public void toggleTextMode() {
+        if (stateManager.getCurrentFilePath().isEmpty()) {
+            AlertHelper.showError("提示", "請先開啟檔案");
+            return;
+        }
+
+        // 在切換模式前，先保存當前頁面索引
+        int currentPageIndex;
+        if (stateManager.isTextMode()) {
+            // 從文字模式切換到圖片模式
+            currentPageIndex = textRenderer.getCurrentPageIndex();
+            stateManager.setCurrentTextPageIndex(currentPageIndex);
+        } else {
+            // 從圖片模式切換到文字模式
+            currentPageIndex = imageViewer.getCurrentIndex();
+            stateManager.setCurrentImagePageIndex(currentPageIndex);
+        }
+
+        boolean isTextMode = !stateManager.isTextMode();
+        stateManager.setTextMode(isTextMode);
+
+        if (isTextMode) {
+            textModeBtn.setText("🖼️ 圖片模式");
+            textModeBtn.setStyle(textModeBtn.getStyle() + "; -fx-background-color: #28a745;");
+            switchToTextMode(currentPageIndex);
+        } else {
+            textModeBtn.setText("📖 文字模式");
+            textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
+            switchToImageMode(currentPageIndex);
+        }
+    }
+
+    private void switchToTextMode(int targetPageIndex) {
+        showLoadingIndicator("正在提取文字內容...");
+
+        Thread extractThread = new Thread(() -> {
+            try {
+                List<TextExtractor.PageText> textPages;
+                if (stateManager.isPdfMode()) {
+                    textPages = textExtractor.extractTextFromPdf(new File(stateManager.getCurrentFilePath()));
+                } else if (stateManager.isEpubMode()) {
+                    textPages = epubLoader.extractTextFromEpub(new File(stateManager.getCurrentFilePath()));
+                } else {
+                    textPages = textExtractor.extractTextFromImages(stateManager.getCurrentImages());
+                }
+
+                Platform.runLater(() -> {
+                    hideLoadingIndicator();
+
+                    if (textPages != null && !textPages.isEmpty()) {
+                        stateManager.setCurrentTextPages(textPages);
+                        centerPane.getChildren().clear();
+                        centerPane.getChildren().addAll(
+                                textRenderer.getMainContainer(),
+                                readingProgressBar,
+                                readingTimeLabel,
+                                pageLabel
+                        );
+
+                        addFocusModeLabel();
+
+                        textRenderer.setPages(textPages);
+                        textRenderer.setThemeColors(settingsManager.getCurrentTheme());
+
+                        int safePageIndex = Math.min(targetPageIndex, textPages.size() - 1);
+                        safePageIndex = Math.max(0, safePageIndex);
+                        textRenderer.goToPage(safePageIndex);
+                        stateManager.setCurrentTextPageIndex(safePageIndex);
+
+                        showNotification("文字模式", "已成功提取 " + textPages.size() + " 頁文字內容\n保持在第 " + (safePageIndex + 1) + " 頁");
+                    } else {
+                        AlertHelper.showError("文字提取失敗", "無法從檔案中提取文字內容");
+                        stateManager.setTextMode(false);
+                        resetTextModeButton();
+                    }
+
+                    updateUI();
+                });
+
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    hideLoadingIndicator();
+                    AlertHelper.showError("文字提取錯誤", e.getMessage());
+                    stateManager.setTextMode(false);
+                    resetTextModeButton();
+                });
+            }
+        });
+
+        extractThread.setDaemon(true);
+        extractThread.start();
+    }
+
+    private void switchToImageMode(int targetPageIndex) {
+        centerPane.getChildren().clear();
+        centerPane.getChildren().addAll(
+                imageViewer.getScrollPane(),
+                readingProgressBar,
+                readingTimeLabel,
+                pageLabel
+        );
+
+        addFocusModeLabel();
+
+        if (imageViewer.hasImages()) {
+            int safePageIndex = Math.min(targetPageIndex, imageViewer.getTotalPages() - 1);
+            safePageIndex = Math.max(0, safePageIndex);
+            imageViewer.goToPage(safePageIndex);
+            stateManager.setCurrentImagePageIndex(safePageIndex);
+            showNotification("圖片模式", "已切換到圖片模式\n保持在第 " + (safePageIndex + 1) + " 頁");
+        }
+
+        updateUI();
+    }
+
+    // 導航方法
+    public void goToFirstPage() {
+        if (stateManager.isTextMode()) {
+            textRenderer.goToPage(0);
+            stateManager.setCurrentTextPageIndex(0);
+        } else {
+            imageViewer.goToFirstPage();
+            stateManager.setCurrentImagePageIndex(0);
+        }
+        updateUI();
+    }
+
+    public void goToPreviousPage() {
+        if (stateManager.isTextMode()) {
+            int currentIndex = textRenderer.getCurrentPageIndex();
+            if (currentIndex > 0) {
+                int newIndex = currentIndex - 1;
+                textRenderer.goToPage(newIndex);
+                stateManager.setCurrentTextPageIndex(newIndex);
+            }
+        } else {
+            imageViewer.prevPage();
+            stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
+        }
+        updateUI();
+    }
+
+    public void goToNextPage() {
+        if (stateManager.isTextMode()) {
+            int currentIndex = textRenderer.getCurrentPageIndex();
+            if (currentIndex < textRenderer.getTotalPages() - 1) {
+                int newIndex = currentIndex + 1;
+                textRenderer.goToPage(newIndex);
+                stateManager.setCurrentTextPageIndex(newIndex);
+            }
+        } else {
+            imageViewer.nextPage();
+            stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
+        }
+        updateUI();
+    }
+
+    public void goToLastPage() {
+        if (stateManager.isTextMode()) {
+            int lastIndex = textRenderer.getTotalPages() - 1;
+            textRenderer.goToPage(lastIndex);
+            stateManager.setCurrentTextPageIndex(lastIndex);
+        } else {
+            imageViewer.goToLastPage();
+            stateManager.setCurrentImagePageIndex(imageViewer.getTotalPages() - 1);
+        }
+        updateUI();
+    }
+
+    public void goToPage(int pageIndex) {
+        if (stateManager.getCurrentFilePath().isEmpty()) return;
+
+        if (stateManager.isTextMode()) {
+            textRenderer.goToPage(pageIndex);
+            stateManager.setCurrentTextPageIndex(pageIndex);
+        } else {
+            imageViewer.goToPage(pageIndex);
+            stateManager.setCurrentImagePageIndex(pageIndex);
+        }
+        updateUI();
+    }
+
+    // UI 控制面板創建
     private void createControlPanels() {
-        // 使用工廠模式創建控制面板
         topControls = controlsFactory.createTopControls(this);
         bottomControls = controlsFactory.createBottomControls(this);
 
@@ -180,9 +618,12 @@ public class MainController {
         autoScrollBtn = controlsFactory.getAutoScrollButton();
         nightModeBtn = controlsFactory.getNightModeButton();
         eyeCareBtn = controlsFactory.getEyeCareButton();
-        toggleNavBarBtn = controlsFactory.getToggleNavBarButton(); // 新增
+        toggleNavBarBtn = controlsFactory.getToggleNavBarButton();
+        focusModeBtn = controlsFactory.getFocusModeButton();
         pageField = controlsFactory.getPageField();
-        
+
+        System.out.println("專注模式按鈕已初始化: " + (focusModeBtn != null));
+
         // 初始化時更新按鈕顯示（預設為圖片模式）
         controlsFactory.updateControlsForMode(false);
     }
@@ -261,6 +702,9 @@ public class MainController {
                         toggleTextMode();
                     }
                     break;
+                case F:
+                    toggleFocusMode();
+                    break;
             }
         });
 
@@ -275,359 +719,6 @@ public class MainController {
                 saveLastReadingPosition();
             }
         });
-    }
-
-    /**
-     * 初始化檔案管理器
-     */
-    private void initializeFileManager() {
-        // 傳遞設定管理器給檔案管理器
-        fileManagerController.setSettingsManager(settingsManager);
-        fileManagerController.setTextExtractor(textExtractor);
-        fileManagerController.initialize(this::openFileFromManager);
-    }
-    
-    /**
-     * 開啟檔案管理器
-     */
-    public void showFileManager() {
-        // 如果有開啟的檔案，先關閉它
-        if (!stateManager.getCurrentFilePath().isEmpty()) {
-            closeCurrentFile();
-        }
-        
-        // 修正：直接顯示檔案管理器，不重複創建
-        fileManagerController.show();
-    }
-    
-    /**
-     * 從檔案管理器開啟檔案
-     */
-    private void openFileFromManager(File file) {
-        if (file == null || !file.exists()) {
-            AlertHelper.showError("錯誤", "檔案不存在或已被移動");
-            return;
-        }
-        
-        String fileName = file.getName().toLowerCase();
-        
-        if (fileName.endsWith(".pdf")) {
-            // 開啟PDF檔案
-            try {
-                List<Image> images = pdfLoader.loadImagesFromPdf(file);
-                if (!images.isEmpty()) {
-                    stateManager.setFileLoaded(file.getAbsolutePath(), true, false, images, null);
-                    switchToImageMode();
-                    imageViewer.setImages(images);
-                    // 初始化頁面索引為 0
-                    stateManager.setCurrentImagePageIndex(0);
-                    primaryStage.setTitle("E_Reader - " + file.getName());
-                    updateUI();
-                    resetTextModeButton();
-                    
-                    // 顯示成功訊息
-                    showNotification("檔案開啟", "成功開啟 PDF檔案: " + file.getName());
-                }
-            } catch (Exception ex) {
-                AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
-            }
-        } else if (fileName.endsWith(".epub")) {
-            // 開啟EPUB檔案
-            try {
-                List<Image> images = epubLoader.loadImagesFromEpub(file);
-                if (!images.isEmpty()) {
-                    stateManager.setFileLoaded(file.getAbsolutePath(), false, true, images, null);
-                    switchToImageMode();
-                    imageViewer.setImages(images);
-                    // 初始化頁面索引為 0
-                    stateManager.setCurrentImagePageIndex(0);
-                    primaryStage.setTitle("E_Reader - " + file.getName());
-                    updateUI();
-                    resetTextModeButton();
-                    
-                    // 顯示成功訊息
-                    showNotification("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
-                } else {
-                    AlertHelper.showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
-                }
-            } catch (Exception ex) {
-                AlertHelper.showError("無法載入 EPUB 檔案", ex.getMessage());
-            }
-        } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
-                   fileName.endsWith(".png") || fileName.endsWith(".gif") || 
-                   fileName.endsWith(".bmp")) {
-            // 開啟圖片檔案 - 載入整個資料夾
-            File parentFolder = file.getParentFile();
-            if (parentFolder != null) {
-                List<Image> images = imageLoader.loadImagesFromFolder(parentFolder);
-                if (!images.isEmpty()) {
-                    stateManager.setFileLoaded(parentFolder.getAbsolutePath(), false, false, images, null);
-                    switchToImageMode();
-                    imageViewer.setImages(images);
-                    // 初始化頁面索引為 0
-                    stateManager.setCurrentImagePageIndex(0);
-                    
-                    // 找到當前檔案的索引並跳轉到該頁
-                    String targetFileName = file.getName();
-                    for (int i = 0; i < images.size(); i++) {
-                        // 這裡需要修改以適配你的圖片載入器的檔案名稱索引
-                        // 暂時跳到第一張圖片
-                        break;
-                    }
-                    
-                    primaryStage.setTitle("E_Reader - " + parentFolder.getName());
-                    updateUI();
-                    resetTextModeButton();
-                    
-                    // 顯示成功訊息
-                    showNotification("檔案開啟", "成功載入圖片資料夾: " + parentFolder.getName());
-                } else {
-                    AlertHelper.showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
-                }
-            }
-        } else {
-            AlertHelper.showError("不支援的檔案格式", 
-                "支援的格式：PDF檔案、EPUB檔案和圖片檔案 (JPG, PNG, GIF, BMP)");
-        }
-    }
-
-    // 文件操作方法
-    public void openImageFolder() {
-        DirectoryChooser dc = new DirectoryChooser();
-        dc.setTitle("選擇圖片資料夾");
-        File folder = dc.showDialog(primaryStage);
-
-        if (folder != null) {
-            List<Image> images = imageLoader.loadImagesFromFolder(folder);
-            if (!images.isEmpty()) {
-                stateManager.setFileLoaded(folder.getAbsolutePath(), false, false, images, null);
-                switchToImageMode();
-                imageViewer.setImages(images);
-                // 初始化頁面索引為 0
-                stateManager.setCurrentImagePageIndex(0);
-                primaryStage.setTitle("E_Reader - " + folder.getName());
-                updateUI();
-                resetTextModeButton();
-            } else {
-                AlertHelper.showError("載入失敗", "資料夾中沒有找到支援的圖片格式");
-            }
-        }
-    }
-
-    public void openPdfFile() {
-        FileChooser fc = new FileChooser();
-        fc.setTitle("選擇 PDF 檔案");
-        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
-        File pdfFile = fc.showOpenDialog(primaryStage);
-
-        if (pdfFile != null) {
-            try {
-                List<Image> images = pdfLoader.loadImagesFromPdf(pdfFile);
-                if (!images.isEmpty()) {
-                    stateManager.setFileLoaded(pdfFile.getAbsolutePath(), true, false, images, null);
-                    switchToImageMode();
-                    imageViewer.setImages(images);
-                    // 初始化頁面索引為 0
-                    stateManager.setCurrentImagePageIndex(0);
-                    primaryStage.setTitle("E_Reader - " + pdfFile.getName());
-                    updateUI();
-                    resetTextModeButton();
-                }
-            } catch (Exception ex) {
-                AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
-            }
-        }
-    }
-
-    // 模式切換方法
-    public void toggleTextMode() {
-        if (stateManager.getCurrentFilePath().isEmpty()) {
-            AlertHelper.showError("提示", "請先開啟檔案");
-            return;
-        }
-
-        // 在切換模式前，先保存當前頁面索引
-        int currentPageIndex;
-        if (stateManager.isTextMode()) {
-            // 從文字模式切換到圖片模式
-            currentPageIndex = textRenderer.getCurrentPageIndex();
-            stateManager.setCurrentTextPageIndex(currentPageIndex);
-        } else {
-            // 從圖片模式切換到文字模式
-            currentPageIndex = imageViewer.getCurrentIndex();
-            stateManager.setCurrentImagePageIndex(currentPageIndex);
-        }
-
-        boolean isTextMode = !stateManager.isTextMode();
-        stateManager.setTextMode(isTextMode);
-
-        if (isTextMode) {
-            textModeBtn.setText("🖼️ 圖片模式");
-            textModeBtn.setStyle(textModeBtn.getStyle() + "; -fx-background-color: #28a745;");
-            switchToTextMode(currentPageIndex);
-        } else {
-            textModeBtn.setText("📖 文字模式");
-            textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
-            switchToImageMode(currentPageIndex);
-        }
-    }
-
-    private void switchToTextMode() {
-        // 使用默認的當前頁面索引
-        switchToTextMode(stateManager.getCurrentImagePageIndex());
-    }
-    
-    private void switchToTextMode(int targetPageIndex) {
-        showLoadingIndicator("正在提取文字內容...");
-
-        Thread extractThread = new Thread(() -> {
-            try {
-                List<TextExtractor.PageText> textPages;
-                if (stateManager.isPdfMode()) {
-                    textPages = textExtractor.extractTextFromPdf(new File(stateManager.getCurrentFilePath()));
-                } else if (stateManager.isEpubMode()) {
-                    textPages = epubLoader.extractTextFromEpub(new File(stateManager.getCurrentFilePath()));
-                } else {
-                    textPages = textExtractor.extractTextFromImages(stateManager.getCurrentImages());
-                }
-
-                Platform.runLater(() -> {
-                    hideLoadingIndicator();
-
-                    if (textPages != null && !textPages.isEmpty()) {
-                        stateManager.setCurrentTextPages(textPages);
-                        centerPane.getChildren().clear();
-                        centerPane.getChildren().addAll(
-                                textRenderer.getMainContainer(),
-                                readingProgressBar,
-                                readingTimeLabel,
-                                pageLabel
-                        );
-
-                        textRenderer.setPages(textPages);
-                        textRenderer.setThemeColors(settingsManager.getCurrentTheme());
-                        
-                        // 跳轉到指定頁面，但要確保不超出範圍
-                        int safePageIndex = Math.min(targetPageIndex, textPages.size() - 1);
-                        safePageIndex = Math.max(0, safePageIndex);
-                        textRenderer.goToPage(safePageIndex);
-                        stateManager.setCurrentTextPageIndex(safePageIndex);
-                        
-                        showNotification("文字模式", "已成功提取 " + textPages.size() + " 頁文字內容\n保持在第 " + (safePageIndex + 1) + " 頁");
-                    } else {
-                        AlertHelper.showError("文字提取失敗", "無法從檔案中提取文字內容");
-                        stateManager.setTextMode(false);
-                        resetTextModeButton();
-                    }
-
-                    updateUI();
-                });
-
-            } catch (Exception e) {
-                Platform.runLater(() -> {
-                    hideLoadingIndicator();
-                    AlertHelper.showError("文字提取錯誤", e.getMessage());
-                    stateManager.setTextMode(false);
-                    resetTextModeButton();
-                });
-            }
-        });
-
-        extractThread.setDaemon(true);
-        extractThread.start();
-    }
-
-    private void switchToImageMode() {
-        // 使用默認的當前頁面索引
-        switchToImageMode(stateManager.getCurrentTextPageIndex());
-    }
-    
-    private void switchToImageMode(int targetPageIndex) {
-        centerPane.getChildren().clear();
-        centerPane.getChildren().addAll(
-                imageViewer.getScrollPane(),
-                readingProgressBar,
-                readingTimeLabel,
-                pageLabel
-        );
-        
-        // 跳轉到指定頁面，但要確保不超出範圍
-        if (imageViewer.hasImages()) {
-            int safePageIndex = Math.min(targetPageIndex, imageViewer.getTotalPages() - 1);
-            safePageIndex = Math.max(0, safePageIndex);
-            imageViewer.goToPage(safePageIndex);
-            stateManager.setCurrentImagePageIndex(safePageIndex);
-            showNotification("圖片模式", "已切換到圖片模式\n保持在第 " + (safePageIndex + 1) + " 頁");
-        }
-        
-        updateUI();
-    }
-
-    // 導航方法
-    public void goToFirstPage() {
-        if (stateManager.isTextMode()) {
-            textRenderer.goToPage(0);
-            stateManager.setCurrentTextPageIndex(0);
-        } else {
-            imageViewer.goToFirstPage();
-            stateManager.setCurrentImagePageIndex(0);
-        }
-        updateUI();
-    }
-
-    public void goToPreviousPage() {
-        if (stateManager.isTextMode()) {
-            int currentIndex = textRenderer.getCurrentPageIndex();
-            if (currentIndex > 0) {
-                int newIndex = currentIndex - 1;
-                textRenderer.goToPage(newIndex);
-                stateManager.setCurrentTextPageIndex(newIndex);
-            }
-        } else {
-            imageViewer.prevPage();
-            stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
-        }
-        updateUI();
-    }
-
-    public void goToNextPage() {
-        if (stateManager.isTextMode()) {
-            int currentIndex = textRenderer.getCurrentPageIndex();
-            if (currentIndex < textRenderer.getTotalPages() - 1) {
-                int newIndex = currentIndex + 1;
-                textRenderer.goToPage(newIndex);
-                stateManager.setCurrentTextPageIndex(newIndex);
-            }
-        } else {
-            imageViewer.nextPage();
-            stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
-        }
-        updateUI();
-    }
-
-    public void goToLastPage() {
-        if (stateManager.isTextMode()) {
-            int lastIndex = textRenderer.getTotalPages() - 1;
-            textRenderer.goToPage(lastIndex);
-            stateManager.setCurrentTextPageIndex(lastIndex);
-        } else {
-            imageViewer.goToLastPage();
-            stateManager.setCurrentImagePageIndex(imageViewer.getTotalPages() - 1);
-        }
-        updateUI();
-    }
-
-    public void goToPage(int pageIndex) {
-        if (stateManager.getCurrentFilePath().isEmpty()) return;
-
-        if (stateManager.isTextMode()) {
-            textRenderer.goToPage(pageIndex);
-            stateManager.setCurrentTextPageIndex(pageIndex);
-        } else {
-            imageViewer.goToPage(pageIndex);
-            stateManager.setCurrentImagePageIndex(pageIndex);
-        }
-        updateUI();
     }
 
     // UI 更新方法
@@ -649,9 +740,8 @@ public class MainController {
     }
 
     private void updateControlsForMode() {
-        // 更新 UI 控制按鈕的顯示
         controlsFactory.updateControlsForMode(stateManager.isTextMode());
-        
+
         // 更新頁碼顯示
         if (stateManager.isTextMode() && stateManager.getCurrentTextPages() != null) {
             pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + stateManager.getCurrentTextPages().size());
@@ -704,40 +794,43 @@ public class MainController {
      * 關閉當前開啟的檔案
      */
     private void closeCurrentFile() {
-        // 停止所有計時器
         if (stateManager.isAutoScrolling()) {
             toggleAutoScroll();
         }
-        
-        // 如果設定要求記住最後檔案，儲存閱讀位置
+
         if (settingsManager.isRememberLastFile() && !stateManager.getCurrentFilePath().isEmpty()) {
             saveLastReadingPosition();
         }
-        
-        // 清空狀態
+
         stateManager.clearCurrentFile();
-        
-        // 清空檢視器
+
         imageViewer.clearImages();
         textRenderer.clearPages();
-        
-        // 切換回圖片模式
+
         if (stateManager.isTextMode()) {
             stateManager.setTextMode(false);
-            switchToImageMode();
+            switchToImageMode(0);
             resetTextModeButton();
         }
-        
-        // 重置UI
+
         primaryStage.setTitle("E_Reader 漫畫＆PDF閱讀器 v3.0 Enhanced");
         updateUI();
-        
-        // 顯示關閉通知
+
         showNotification("檔案已關閉", "檔案已關閉，可以開啟新檔案");
     }
-    
+
     // 工具方法
     private void handleImageClick(MouseEvent event) {
+        if (isFocusMode) {
+            double x = event.getX();
+            double imageWidth = imageViewer.getImageView().getBoundsInLocal().getWidth();
+
+            if (x > imageWidth * 0.3 && x < imageWidth * 0.7) {
+                exitFocusMode();
+                return;
+            }
+        }
+
         if (stateManager.isTextMode()) return;
 
         double x = event.getX();
@@ -790,7 +883,6 @@ public class MainController {
     public void toggleNightMode() {
         settingsManager.toggleNightMode();
 
-        // 更新按鈕狀態 - 基於 nightMode 標記
         if (settingsManager.isNightMode()) {
             nightModeBtn.setStyle(nightModeBtn.getStyle() + "; -fx-background-color: #28a745;");
         } else {
@@ -804,7 +896,6 @@ public class MainController {
     public void toggleEyeCareMode() {
         settingsManager.toggleEyeCareMode();
 
-        // 更新按鈕狀態
         if (settingsManager.isEyeCareMode()) {
             eyeCareBtn.setStyle(eyeCareBtn.getStyle() + "; -fx-background-color: #28a745;");
             showNotification("護眼模式已啟用", "建議每30分鐘休息5-10分鐘");
@@ -842,25 +933,121 @@ public class MainController {
 
     // 專注模式
     public void toggleFocusMode() {
-        boolean focusMode = !controlsContainer.isVisible();
-        controlsContainer.setVisible(!focusMode);
-        controlsContainer.setManaged(!focusMode);
-        readingTimeLabel.setVisible(!focusMode);
-        readingProgressBar.setVisible(!focusMode);
+        System.out.println("專注模式切換被呼叫, 目前狀態: " + isFocusMode);
 
-        if (focusMode) {
-            showNotification("專注模式", "按 F 鍵或點擊中央退出專注模式");
-        }
+        isFocusMode = !isFocusMode;
+
+        Platform.runLater(() -> {
+            if (isFocusMode) {
+                enterFocusMode();
+            } else {
+                exitFocusMode();
+            }
+        });
     }
-    
+
+    /**
+     * 改進的專注模式進入動畫
+     */
+    private void enterFocusMode() {
+        // iOS風格的淡出動畫
+        javafx.animation.Timeline fadeOutTimeline = new javafx.animation.Timeline();
+
+        // 控制面板淡出
+        javafx.animation.KeyFrame controlsFadeOut = new javafx.animation.KeyFrame(
+                javafx.util.Duration.millis(400),
+                new javafx.animation.KeyValue(controlsContainer.opacityProperty(), 0.0),
+                new javafx.animation.KeyValue(controlsContainer.scaleXProperty(), 0.95),
+                new javafx.animation.KeyValue(controlsContainer.scaleYProperty(), 0.95)
+        );
+
+        // 進度條和標籤淡出
+        javafx.animation.KeyFrame progressFadeOut = new javafx.animation.KeyFrame(
+                javafx.util.Duration.millis(300),
+                new javafx.animation.KeyValue(readingProgressBar.opacityProperty(), 0.0),
+                new javafx.animation.KeyValue(readingTimeLabel.opacityProperty(), 0.0),
+                new javafx.animation.KeyValue(pageLabel.opacityProperty(), 0.0)
+        );
+
+        fadeOutTimeline.getKeyFrames().addAll(controlsFadeOut, progressFadeOut);
+
+        fadeOutTimeline.setOnFinished(e -> {
+            controlsContainer.setVisible(false);
+            controlsContainer.setManaged(false);
+            readingProgressBar.setVisible(false);
+            readingTimeLabel.setVisible(false);
+            pageLabel.setVisible(false);
+        });
+
+        fadeOutTimeline.play();
+
+        // 顯示專注模式提示
+        Label focusModeLabel = (Label) centerPane.lookup("#focusModeLabel");
+        if (focusModeLabel != null) {
+            focusModeLabel.setVisible(true);
+            focusModeLabel.setOpacity(0.0);
+            focusModeLabel.setScaleX(0.8);
+            focusModeLabel.setScaleY(0.8);
+
+            // iOS風格彈性動畫
+            javafx.animation.Timeline showLabelTimeline = new javafx.animation.Timeline();
+            javafx.animation.KeyFrame labelFadeIn = new javafx.animation.KeyFrame(
+                    javafx.util.Duration.millis(600),
+                    new javafx.animation.KeyValue(focusModeLabel.opacityProperty(), 1.0),
+                    new javafx.animation.KeyValue(focusModeLabel.scaleXProperty(), 1.0),
+                    new javafx.animation.KeyValue(focusModeLabel.scaleYProperty(), 1.0)
+            );
+            showLabelTimeline.getKeyFrames().add(labelFadeIn);
+            showLabelTimeline.play();
+
+            // 3秒後自動隱藏提示
+            javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(3));
+            pause.setOnFinished(event -> {
+                javafx.animation.Timeline hideLabelTimeline = new javafx.animation.Timeline();
+                javafx.animation.KeyFrame labelFadeOut = new javafx.animation.KeyFrame(
+                        javafx.util.Duration.millis(400),
+                        new javafx.animation.KeyValue(focusModeLabel.opacityProperty(), 0.0),
+                        new javafx.animation.KeyValue(focusModeLabel.scaleXProperty(), 0.8),
+                        new javafx.animation.KeyValue(focusModeLabel.scaleYProperty(), 0.8)
+                );
+                hideLabelTimeline.getKeyFrames().add(labelFadeOut);
+                hideLabelTimeline.setOnFinished(hideEvent -> focusModeLabel.setVisible(false));
+                hideLabelTimeline.play();
+            });
+            pause.play();
+        }
+
+        // 更新按鈕狀態
+        if (focusModeBtn != null) {
+            focusModeBtn.setText("🛋️ 退出");
+            focusModeBtn.setStyle(
+                    "-fx-background-color: linear-gradient(to bottom, " +
+                            "rgba(231,76,60,0.8), rgba(192,57,43,0.8)); " +
+                            "-fx-border-color: rgba(231,76,60,0.6); " +
+                            "-fx-border-width: 0.5; " +
+                            "-fx-border-radius: 8; " +
+                            "-fx-background-radius: 8; " +
+                            "-fx-text-fill: white; " +
+                            "-fx-font-size: 11px; " +
+                            "-fx-font-weight: 600; " +
+                            "-fx-padding: 6 12 6 12; " +
+                            "-fx-cursor: hand; " +
+                            "-fx-effect: dropshadow(gaussian, rgba(231,76,60,0.3), 6, 0, 0, 2);"
+            );
+        }
+
+        showNotification("專注模式", "已進入沉浸式閱讀體驗");
+    }
+
+
+
     /**
      * 切換導覽列顯示/隱藏狀態
      */
     public void toggleNavigationBar() {
         if (navBarController != null) {
             navBarController.toggleNavigationBar();
-            
-            // 更新按鈕顯示
+
             if (navBarController.isNavigationBarPinned()) {
                 toggleNavBarBtn.setText("🙈 隱藏導覽列");
                 toggleNavBarBtn.setStyle(toggleNavBarBtn.getStyle().replace("; -fx-background-color: #dc3545", ""));
@@ -901,61 +1088,243 @@ public class MainController {
             if (canGoNext) {
                 goToNextPage();
             } else {
-                toggleAutoScroll(); // 停止自動翻頁
+                toggleAutoScroll();
             }
         });
     }
 
-    // 通知顯示
+
+
+
+    // 這是MainController.java中需要修改的部分
+
+    /**
+     * 改進的showNotification方法 - 現代化通知設計
+     */
     public void showNotification(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.show();
+        // 創建現代化的通知彈窗
+        Stage notificationStage = new Stage();
+        notificationStage.initStyle(StageStyle.UNDECORATED);
+        notificationStage.initOwner(primaryStage);
+        notificationStage.setAlwaysOnTop(true);
 
-        // 3秒後自動關閉
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                Platform.runLater(() -> alert.close());
+        // 創建通知內容
+        VBox notificationBox = new VBox(12);
+        notificationBox.setPadding(new Insets(20, 24, 20, 24));
+        notificationBox.setAlignment(Pos.CENTER_LEFT);
+        notificationBox.setMaxWidth(350);
+        notificationBox.setMinWidth(300);
+
+        // 現代化毛玻璃背景效果
+        notificationBox.setStyle(
+                "-fx-background-color: linear-gradient(135deg, " +
+                        "rgba(30,30,30,0.95) 0%, " +
+                        "rgba(40,40,40,0.98) 50%, " +
+                        "rgba(25,25,25,0.95) 100%); " +
+                        "-fx-border-color: linear-gradient(135deg, " +
+                        "rgba(52,152,219,0.6), rgba(155,89,182,0.6)); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 16; " +
+                        "-fx-background-radius: 16; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 25, 0, 0, 8);"
+        );
+
+        // 頂部指示條
+        Rectangle topIndicator = new Rectangle(60, 4);
+        topIndicator.setFill(javafx.scene.paint.LinearGradient.valueOf(
+                "linear-gradient(to right, #3498db, #9b59b6)"
+        ));
+        topIndicator.setArcWidth(4);
+        topIndicator.setArcHeight(4);
+
+        // 標題標籤
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.95); " +
+                        "-fx-font-size: 16px; " +
+                        "-fx-font-weight: 700; " +
+                        "-fx-font-family: 'SF Pro Display', 'Segoe UI', sans-serif;"
+        );
+
+        // 消息標籤
+        Label messageLabel = new Label(message);
+        messageLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.8); " +
+                        "-fx-font-size: 13px; " +
+                        "-fx-font-weight: 400; " +
+                        "-fx-wrap-text: true; " +
+                        "-fx-font-family: 'SF Pro Text', 'Segoe UI', sans-serif;"
+        );
+        messageLabel.setMaxWidth(300);
+
+        // 時間戳標籤
+        Label timeLabel = new Label(java.time.LocalTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+        ));
+        timeLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.5); " +
+                        "-fx-font-size: 11px; " +
+                        "-fx-font-weight: 500;"
+        );
+
+        // 圖標 - 根據標題選擇
+        Label iconLabel = new Label(getNotificationIcon(title));
+        iconLabel.setStyle(
+                "-fx-font-size: 24px; " +
+                        "-fx-background-color: rgba(52,152,219,0.2); " +
+                        "-fx-padding: 8; " +
+                        "-fx-background-radius: 50%; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.3), 4, 0, 0, 1);"
+        );
+
+        // 頂部容器（圖標 + 標題 + 時間）
+        HBox headerBox = new HBox(12);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+
+        VBox titleBox = new VBox(2);
+        titleBox.getChildren().add(titleLabel);
+
+        headerBox.getChildren().addAll(iconLabel, titleBox);
+
+        // 右側時間
+        HBox.setHgrow(titleBox, Priority.ALWAYS);
+        headerBox.getChildren().add(timeLabel);
+
+        // 分隔線
+        Separator separator = new Separator();
+        separator.setStyle("-fx-background-color: rgba(255,255,255,0.1);");
+
+        // 組裝通知內容
+        notificationBox.getChildren().addAll(
+                topIndicator,
+                headerBox,
+                separator,
+                messageLabel
+        );
+
+        // 關閉按鈕
+        Button closeButton = new Button("×");
+        closeButton.setStyle(
+                "-fx-background-color: transparent; " +
+                        "-fx-text-fill: rgba(255,255,255,0.6); " +
+                        "-fx-font-size: 18px; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-cursor: hand; " +
+                        "-fx-background-radius: 12; " +
+                        "-fx-min-width: 24; " +
+                        "-fx-min-height: 24; " +
+                        "-fx-max-width: 24; " +
+                        "-fx-max-height: 24;"
+        );
+
+        closeButton.setOnMouseEntered(e -> {
+            closeButton.setStyle(closeButton.getStyle() +
+                    "-fx-background-color: rgba(231,76,60,0.8); -fx-text-fill: white;");
+        });
+
+        closeButton.setOnMouseExited(e -> {
+            closeButton.setStyle(
+                    "-fx-background-color: transparent; " +
+                            "-fx-text-fill: rgba(255,255,255,0.6); " +
+                            "-fx-font-size: 18px; " +
+                            "-fx-font-weight: bold; " +
+                            "-fx-cursor: hand; " +
+                            "-fx-background-radius: 12; " +
+                            "-fx-min-width: 24; " +
+                            "-fx-min-height: 24; " +
+                            "-fx-max-width: 24; " +
+                            "-fx-max-height: 24;"
+            );
+        });
+
+        // 主容器
+        StackPane mainContainer = new StackPane();
+        mainContainer.getChildren().add(notificationBox);
+
+        // 將關閉按鈕定位到右上角
+        StackPane.setAlignment(closeButton, Pos.TOP_RIGHT);
+        StackPane.setMargin(closeButton, new Insets(12, 12, 0, 0));
+        mainContainer.getChildren().add(closeButton);
+
+        Scene notificationScene = new Scene(mainContainer);
+        notificationScene.setFill(Color.TRANSPARENT);
+        notificationStage.setScene(notificationScene);
+
+        // 定位通知視窗到右上角
+        Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+        notificationStage.setX(screenBounds.getMaxX() - 370);
+        notificationStage.setY(screenBounds.getMinY() + 20);
+
+        // 進入動畫 - 從右側滑入
+        TranslateTransition slideIn = new TranslateTransition(Duration.millis(400), mainContainer);
+        slideIn.setFromX(400);
+        slideIn.setToX(0);
+        slideIn.setInterpolator(Interpolator.EASE_OUT);
+
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(400), mainContainer);
+        fadeIn.setFromValue(0.0);
+        fadeIn.setToValue(1.0);
+
+        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(400), mainContainer);
+        scaleIn.setFromX(0.8);
+        scaleIn.setFromY(0.8);
+        scaleIn.setToX(1.0);
+        scaleIn.setToY(1.0);
+        scaleIn.setInterpolator(Interpolator.EASE_OUT);
+
+        ParallelTransition enterAnimation = new ParallelTransition(slideIn, fadeIn, scaleIn);
+
+        // 關閉動畫
+        Runnable closeNotification = () -> {
+            TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), mainContainer);
+            slideOut.setFromX(0);
+            slideOut.setToX(400);
+            slideOut.setInterpolator(Interpolator.EASE_IN);
+
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), mainContainer);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(300), mainContainer);
+            scaleOut.setFromX(1.0);
+            scaleOut.setFromY(1.0);
+            scaleOut.setToX(0.8);
+            scaleOut.setToY(0.8);
+
+            ParallelTransition exitAnimation = new ParallelTransition(slideOut, fadeOut, scaleOut);
+            exitAnimation.setOnFinished(e -> notificationStage.close());
+            exitAnimation.play();
+        };
+
+        // 事件處理
+        closeButton.setOnAction(e -> closeNotification.run());
+
+        // 點擊通知本體關閉
+        notificationBox.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 1) {
+                closeNotification.run();
             }
-        }, 3000);
+        });
+
+        // 顯示通知
+        notificationStage.show();
+        enterAnimation.play();
+
+        // 5秒後自動關閉
+        PauseTransition autoClose = new PauseTransition(Duration.seconds(5));
+        autoClose.setOnFinished(e -> {
+            if (notificationStage.isShowing()) {
+                closeNotification.run();
+            }
+        });
+        autoClose.play();
+
+        // 懸停時暫停自動關閉
+        notificationBox.setOnMouseEntered(e -> autoClose.pause());
+        notificationBox.setOnMouseExited(e -> autoClose.play());
     }
 
-    // 設定套用
-    public void applySettings() {
-        SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
 
-        String backgroundColor = currentTheme.getBackgroundColor();
-        String textColor = currentTheme.getTextColor();
-
-        // 更新背景顏色
-        if (imageViewer.getScrollPane() != null) {
-            imageViewer.getScrollPane().setStyle("-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";");
-        }
-        centerPane.setStyle("-fx-background-color: " + backgroundColor + ";");
-
-        // 如果在文字模式，也更新文字渲染器的主題
-        if (stateManager.isTextMode()) {
-            textRenderer.setThemeColors(currentTheme);
-        }
-
-        // 套用其他設定
-        imageViewer.setFitMode(settingsManager.getFitMode());
-
-        // 更新按鈕狀態
-        updateButtonStates();
-
-        // 更新護眼提醒
-        if (settingsManager.isEyeCareMode() && !timerManager.isEyeCareReminderRunning()) {
-            timerManager.startEyeCareReminder(() ->
-                    showNotification("護眼提醒", "您已經閱讀30分鐘了，建議休息5-10分鐘！"));
-        } else if (!settingsManager.isEyeCareMode() && timerManager.isEyeCareReminderRunning()) {
-            timerManager.stopEyeCareReminder();
-        }
-    }
 
     private void updateButtonStates() {
         // 更新夜間模式按鈕狀態 - 基於 nightMode 標記而非當前主題
@@ -1092,51 +1461,296 @@ public class MainController {
         }
     }
 
-    // 設定對話框
+    /**
+     * 添加專注模式標籤
+     */
+    private void addFocusModeLabel() {
+        // 檢查是否已經存在
+        Label existingLabel = (Label) centerPane.lookup("#focusModeLabel");
+        if (existingLabel == null) {
+            // 專注模式提示標籤
+            Label focusModeLabel = new Label("🎯 專注模式 - 按 F 或點擊中央退出");
+            focusModeLabel.setStyle(
+                "-fx-text-fill: #40e0d0;" +
+                "-fx-background-color: rgba(111,66,193,0.9);" +
+                "-fx-background-radius: 25px;" +
+                "-fx-padding: 12 25 12 25;" +
+                "-fx-font-size: 16px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-effect: dropshadow(gaussian, rgba(111,66,193,0.8), 20, 0, 0, 5);"
+            );
+            focusModeLabel.setVisible(false);
+            focusModeLabel.setId("focusModeLabel");
+            StackPane.setAlignment(focusModeLabel, Pos.TOP_CENTER);
+            StackPane.setMargin(focusModeLabel, new Insets(30, 0, 0, 0));
+            centerPane.getChildren().add(focusModeLabel);
+        }
+    }
+
+    /**
+     * 改進的showSettingsDialog方法 - iOS風格設定對話框
+     */
+    /**
+     * 改進的showSettingsDialog方法 - 移除舊版本，使用UIControlsFactory中的新版本
+     */
     public void showSettingsDialog() {
-        // 簡單的設定對話框實作
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("設定");
-        dialog.setHeaderText("應用程式設定");
+        // 這個方法現在由UIControlsFactory中的showEnhancedSettingsDialog處理
+        // 此處保留以維持向後相容性
+        System.out.println("設定對話框已移至UIControlsFactory");
+    }
 
-        // 創建設定選項
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(20));
 
-        // 主題選擇
-        Label themeLabel = new Label("主題模式:");
-        ComboBox<SettingsManager.ThemeMode> themeCombo = new ComboBox<>();
-        themeCombo.getItems().addAll(SettingsManager.ThemeMode.values());
-        themeCombo.setValue(settingsManager.getThemeMode());
+    /**
+     * 創建設定區塊的輔助方法
+     */
+    private VBox createSettingsSection(String title, String description) {
+        VBox section = new VBox(8);
 
-        // OCR設定已移至檔案管理器
-
-        // 記住最後檔案
-        CheckBox rememberFileCheckBox = new CheckBox("記住最後開啟的檔案");
-        rememberFileCheckBox.setSelected(settingsManager.isRememberLastFile());
-
-        // 顯示頁碼
-        CheckBox showPageNumbersCheckBox = new CheckBox("顯示頁碼");
-        showPageNumbersCheckBox.setSelected(settingsManager.isShowPageNumbers());
-
-        content.getChildren().addAll(
-                themeLabel, themeCombo,
-                new Separator(),
-                rememberFileCheckBox,
-                showPageNumbersCheckBox
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.95); " +
+                        "-fx-font-size: 14px; " +
+                        "-fx-font-weight: 600;"
         );
 
-        dialog.getDialogPane().setContent(content);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        Label descLabel = new Label(description);
+        descLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.7); " +
+                        "-fx-font-size: 11px; " +
+                        "-fx-wrap-text: true;"
+        );
 
-        dialog.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
-                settingsManager.setThemeMode(themeCombo.getValue());
-                settingsManager.setRememberLastFile(rememberFileCheckBox.isSelected());
-                settingsManager.setShowPageNumbers(showPageNumbersCheckBox.isSelected());
-                settingsManager.saveSettings();
-                applySettings();
-            }
-        });
+        section.getChildren().addAll(titleLabel, descLabel);
+        return section;
     }
+
+    /**
+     * 創建iOS風格的CheckBox
+     */
+    private CheckBox createStyledCheckBox(String text, String description) {
+        VBox container = new VBox(3);
+
+        CheckBox checkBox = new CheckBox(text);
+        checkBox.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.9); " +
+                        "-fx-font-size: 12px; " +
+                        "-fx-font-weight: 500;"
+        );
+
+        Label descLabel = new Label(description);
+        descLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.6); " +
+                        "-fx-font-size: 10px; " +
+                        "-fx-padding: 0 0 0 25;"
+        );
+
+        container.getChildren().addAll(checkBox, descLabel);
+
+        // 將容器的CheckBox返回（需要特殊處理）
+        return checkBox;
+    }
+
+
+
+    /**
+     * 改進的專注模式退出動畫
+     */
+    private void exitFocusMode() {
+        // 重新顯示UI元素
+        controlsContainer.setVisible(true);
+        controlsContainer.setManaged(true);
+        readingProgressBar.setVisible(true);
+        readingTimeLabel.setVisible(true);
+        pageLabel.setVisible(true);
+
+        // 設置初始狀態
+        controlsContainer.setOpacity(0.0);
+        controlsContainer.setScaleX(0.95);
+        controlsContainer.setScaleY(0.95);
+        readingProgressBar.setOpacity(0.0);
+        readingTimeLabel.setOpacity(0.0);
+        pageLabel.setOpacity(0.0);
+
+        // iOS風格的彈入動畫
+        javafx.animation.Timeline fadeInTimeline = new javafx.animation.Timeline();
+
+        // 控制面板彈入
+        javafx.animation.KeyFrame controlsFadeIn = new javafx.animation.KeyFrame(
+                javafx.util.Duration.millis(500),
+                new javafx.animation.KeyValue(controlsContainer.opacityProperty(), 1.0),
+                new javafx.animation.KeyValue(controlsContainer.scaleXProperty(), 1.0),
+                new javafx.animation.KeyValue(controlsContainer.scaleYProperty(), 1.0),
+                new javafx.animation.KeyValue(controlsContainer.translateYProperty(), 0.0)
+        );
+
+        // 進度條和標籤淡入
+        javafx.animation.KeyFrame elementsFadeIn = new javafx.animation.KeyFrame(
+                javafx.util.Duration.millis(400),
+                new javafx.animation.KeyValue(readingProgressBar.opacityProperty(), 1.0),
+                new javafx.animation.KeyValue(readingTimeLabel.opacityProperty(), 1.0),
+                new javafx.animation.KeyValue(pageLabel.opacityProperty(), 1.0)
+        );
+
+        fadeInTimeline.getKeyFrames().addAll(controlsFadeIn, elementsFadeIn);
+        fadeInTimeline.play();
+
+        // 隱藏專注模式提示
+        Label focusModeLabel = (Label) centerPane.lookup("#focusModeLabel");
+        if (focusModeLabel != null) {
+            focusModeLabel.setVisible(false);
+        }
+
+        // 恢復按鈕狀態
+        if (focusModeBtn != null) {
+            focusModeBtn.setText("🎯 專注");
+            focusModeBtn.setStyle(
+                    "-fx-background-color: linear-gradient(to bottom, " +
+                            "rgba(155,89,182,0.8), rgba(142,68,173,0.8)); " +
+                            "-fx-border-color: rgba(155,89,182,0.6); " +
+                            "-fx-border-width: 0.5; " +
+                            "-fx-border-radius: 8; " +
+                            "-fx-background-radius: 8; " +
+                            "-fx-text-fill: white; " +
+                            "-fx-font-size: 11px; " +
+                            "-fx-font-weight: 600; " +
+                            "-fx-padding: 6 12 6 12; " +
+                            "-fx-cursor: hand; " +
+                            "-fx-effect: dropshadow(gaussian, rgba(155,89,182,0.3), 6, 0, 0, 2);"
+            );
+        }
+
+        showNotification("歡迎回來", "已退出專注模式");
+    }
+
+    /**
+     * 改進的applySettings方法 - 更流暢的主題切換
+     */
+    public void applySettings() {
+        SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+
+        String backgroundColor = currentTheme.getBackgroundColor();
+        String textColor = currentTheme.getTextColor();
+
+        // 使用動畫進行主題切換
+        javafx.animation.Timeline themeTransition = new javafx.animation.Timeline();
+
+        // 背景顏色過渡
+        if (imageViewer.getScrollPane() != null) {
+            String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
+
+            // 創建漸變動畫效果
+            javafx.animation.FadeTransition bgFade = new javafx.animation.FadeTransition(
+                    javafx.util.Duration.millis(300),
+                    imageViewer.getScrollPane()
+            );
+            bgFade.setFromValue(0.8);
+            bgFade.setToValue(1.0);
+            bgFade.setOnFinished(e -> imageViewer.getScrollPane().setStyle(newStyle));
+            bgFade.play();
+        }
+
+        // 中央面板背景更新
+        String centerStyle =
+                "-fx-background-color: linear-gradient(to bottom, " +
+                        "rgba(18,18,18,0.98) 0%, " +
+                        "rgba(25,25,25,0.95) 100%);";
+        centerPane.setStyle(centerStyle);
+
+        // 如果在文字模式，也更新文字渲染器的主題
+        if (stateManager.isTextMode()) {
+            textRenderer.setThemeColors(currentTheme);
+        }
+
+        // 套用其他設定
+        imageViewer.setFitMode(settingsManager.getFitMode());
+
+        // 更新按鈕狀態（帶動畫效果）
+        updateButtonStatesWithAnimation();
+
+        // 更新護眼提醒
+        if (settingsManager.isEyeCareMode() && !timerManager.isEyeCareReminderRunning()) {
+            timerManager.startEyeCareReminder(() ->
+                    showNotification("護眼提醒 👁️", "已閱讀30分鐘，建議休息片刻"));
+        } else if (!settingsManager.isEyeCareMode() && timerManager.isEyeCareReminderRunning()) {
+            timerManager.stopEyeCareReminder();
+        }
+    }
+
+    /**
+     * 帶動畫效果的按鈕狀態更新
+     */
+    private void updateButtonStatesWithAnimation() {
+        // 夜間模式按鈕動畫更新
+        javafx.animation.FadeTransition nightBtnTransition = new javafx.animation.FadeTransition(
+                javafx.util.Duration.millis(200), nightModeBtn
+        );
+
+        if (settingsManager.isNightMode()) {
+            nightBtnTransition.setFromValue(0.7);
+            nightBtnTransition.setToValue(1.0);
+            nightBtnTransition.setOnFinished(e -> {
+                if (!nightModeBtn.getStyle().contains("rgba(46,204,113,0.8)")) {
+                    nightModeBtn.setStyle(nightModeBtn.getStyle() +
+                            "; -fx-background-color: linear-gradient(to bottom, rgba(46,204,113,0.8), rgba(39,174,96,0.8));");
+                }
+            });
+        } else {
+            nightModeBtn.setStyle(nightModeBtn.getStyle().replaceAll(
+                    "; -fx-background-color: linear-gradient\\(to bottom, rgba\\(46,204,113,0\\.8\\), rgba\\(39,174,96,0\\.8\\)\\)", ""));
+        }
+        nightBtnTransition.play();
+
+        // 護眼模式按鈕動畫更新
+        javafx.animation.FadeTransition eyeCareBtnTransition = new javafx.animation.FadeTransition(
+                javafx.util.Duration.millis(200), eyeCareBtn
+        );
+
+        if (settingsManager.isEyeCareMode()) {
+            eyeCareBtnTransition.setFromValue(0.7);
+            eyeCareBtnTransition.setToValue(1.0);
+            eyeCareBtnTransition.setOnFinished(e -> {
+                if (!eyeCareBtn.getStyle().contains("rgba(46,204,113,0.8)")) {
+                    eyeCareBtn.setStyle(eyeCareBtn.getStyle() +
+                            "; -fx-background-color: linear-gradient(to bottom, rgba(46,204,113,0.8), rgba(39,174,96,0.8));");
+                }
+            });
+        } else {
+            eyeCareBtn.setStyle(eyeCareBtn.getStyle().replaceAll(
+                    "; -fx-background-color: linear-gradient\\(to bottom, rgba\\(46,204,113,0\\.8\\), rgba\\(39,174,96,0\\.8\\)\\)", ""));
+        }
+        eyeCareBtnTransition.play();
+    }
+
+
+
+    /**
+     * 根據通知標題獲取對應圖標
+     */
+    private String getNotificationIcon(String title) {
+        if (title.contains("成功") || title.contains("完成") || title.contains("已")) {
+            return "✅";
+        } else if (title.contains("錯誤") || title.contains("失敗")) {
+            return "❌";
+        } else if (title.contains("警告") || title.contains("注意")) {
+            return "⚠️";
+        } else if (title.contains("設定") || title.contains("配置")) {
+            return "⚙️";
+        } else if (title.contains("檔案") || title.contains("文件")) {
+            return "📄";
+        } else if (title.contains("專注") || title.contains("模式")) {
+            return "🎯";
+        } else if (title.contains("閱讀") || title.contains("時間")) {
+            return "📚";
+        } else if (title.contains("護眼") || title.contains("夜間")) {
+            return "👁️";
+        } else if (title.contains("歡迎")) {
+            return "👋";
+        } else {
+            return "ℹ️";
+        }
+    }
+
+
+
+
 }

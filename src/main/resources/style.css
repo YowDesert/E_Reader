@@ -1,800 +1,1489 @@
-/* E-Reader 響應式樣式表 - 支援平板和電腦的直式與橫式 */
+/* =========================== iOS風格玻璃質感E-Reader樣式表 =========================== */
 
-/* 根元素樣式 */
+/* =========================== 根元素和全域設定 =========================== */
 .root {
-    -fx-background-color: #2b2b2b;
-    -fx-font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans CJK TC", sans-serif;
+    -fx-background-color: linear-gradient(135deg,
+        rgba(255,255,255,0.05) 0%,
+        rgba(255,255,255,0.02) 50%,
+        rgba(255,255,255,0.08) 100%),
+        linear-gradient(45deg,
+        #667eea 0%,
+        #764ba2 25%,
+        #f093fb 50%,
+        #f5576c 75%,
+        #4facfe 100%);
+    -fx-font-family: "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Microsoft JhengHei UI", "Segoe UI", sans-serif;
     -fx-font-smoothing-type: lcd;
 }
 
-/* =========================== 基礎元件樣式 =========================== */
-
-/* 按鈕基礎樣式 */
-.button {
-    -fx-background-color: linear-gradient(to bottom, #404040, #353535);
-    -fx-text-fill: white;
-    -fx-border-radius: 8px;
-    -fx-background-radius: 8px;
-    -fx-padding: 12px 20px;
-    -fx-font-size: 14px;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0, 0, 2);
-    -fx-font-weight: 500;
+/* =========================== 玻璃態效果基礎 =========================== */
+.glass-base {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 20, 0, 0, 8);
 }
 
-.button:hover {
-    -fx-background-color: linear-gradient(to bottom, #505050, #454545);
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 3);
+.glass-panel {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1.5px;
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 25, 0, 0, 12);
+    -fx-padding: 24;
+}
+
+.glass-card {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-width: 1px;
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 20, 0, 0, 8);
+    -fx-padding: 20;
+}
+
+/* =========================== iOS風格按鈕 =========================== */
+.ios-button {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-background-radius: 14px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 14px;
+    -fx-padding: 12 24 12 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.3);
+    -fx-border-color: rgba(255, 255, 255, 0.4);
     -fx-scale-x: 1.05;
     -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 12, 0, 0, 6);
 }
 
-.button:pressed {
-    -fx-background-color: linear-gradient(to bottom, #303030, #252525);
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
+.ios-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 4, 0, 0, 2);
 }
 
-/* =========================== 設備適應性樣式 =========================== */
-
-/* 平板直式 (Portrait) - 寬度 < 900px, 高度 > 寬度 */
-.tablets-portrait .button {
-    -fx-min-height: 50px;
-    -fx-min-width: 100px;
-    -fx-font-size: 16px;
-    -fx-padding: 15px 25px;
-}
-
-.tablets-portrait .control-panel {
-    -fx-padding: 20px 15px;
-    -fx-spacing: 20px;
-}
-
-.tablets-portrait .page-label {
-    -fx-font-size: 18px;
-    -fx-padding: 12px 25px;
-}
-
-.tablets-portrait .text-field {
-    -fx-min-height: 50px;
-    -fx-font-size: 16px;
-    -fx-padding: 15px 20px;
-}
-
-/* 平板橫式 (Landscape) - 寬度 > 高度, 但 < 1200px */
-.tablets-landscape .button {
-    -fx-min-height: 45px;
-    -fx-min-width: 90px;
+/* 主要按鈕 - 更強烈的玻璃效果 */
+.ios-button-primary {
+    -fx-background-color: rgba(255, 255, 255, 0.25);
+    -fx-text-fill: white;
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(255, 255, 255, 0.4);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 16px;
+    -fx-padding: 14 28 14 28;
     -fx-font-size: 15px;
-    -fx-padding: 12px 20px;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 12, 0, 0, 6);
 }
 
-.tablets-landscape .control-panel {
-    -fx-padding: 15px 20px;
-    -fx-spacing: 15px;
+.ios-button-primary:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.35);
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 16, 0, 0, 8);
 }
 
-.tablets-landscape .page-label {
-    -fx-font-size: 16px;
-    -fx-padding: 10px 20px;
-}
-
-/* 桌面直式 - 寬度 > 900px, 高度 > 寬度 */
-.desktop-portrait .button {
-    -fx-min-height: 40px;
-    -fx-min-width: 80px;
-    -fx-font-size: 14px;
-    -fx-padding: 10px 18px;
-}
-
-.desktop-portrait .control-panel {
-    -fx-padding: 15px;
-    -fx-spacing: 15px;
-}
-
-.desktop-portrait .page-label {
-    -fx-font-size: 16px;
-    -fx-padding: 10px 20px;
-}
-
-/* 桌面橫式 - 寬度 > 1200px, 寬度 > 高度 */
-.desktop-landscape .button {
-    -fx-min-height: 35px;
-    -fx-min-width: 75px;
-    -fx-font-size: 13px;
-    -fx-padding: 8px 15px;
-}
-
-.desktop-landscape .control-panel {
-    -fx-padding: 12px;
-    -fx-spacing: 12px;
-}
-
-.desktop-landscape .page-label {
-    -fx-font-size: 14px;
-    -fx-padding: 8px 16px;
-}
-
-/* =========================== 文字渲染器樣式 =========================== */
-
-/* 文字容器基礎樣式 */
-.text-container {
-    -fx-background-color: transparent;
-    -fx-padding: 0;
-}
-
-/* 文字頁面樣式 */
-.text-page {
-    -fx-background-color: #1e1e1e;
-    -fx-background-radius: 10px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 5);
-    -fx-border-color: rgba(255, 255, 255, 0.1);
+/* 危險按鈕 */
+.ios-button-danger {
+    -fx-background-color: rgba(255, 59, 48, 0.3);
+    -fx-text-fill: white;
+    -fx-background-radius: 14px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
     -fx-border-width: 1px;
-    -fx-border-radius: 10px;
+    -fx-border-radius: 14px;
+    -fx-padding: 12 24 12 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.2), 10, 0, 0, 4);
 }
 
-/* 平板直式的文字頁面 */
-.tablets-portrait .text-page {
-    -fx-padding: 30px 25px;
-    -fx-spacing: 24px;
-    -fx-max-width: 650px;
+.ios-button-danger:hover {
+    -fx-background-color: rgba(255, 59, 48, 0.4);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.3), 14, 0, 0, 6);
 }
 
-/* 平板橫式的文字頁面 */
-.tablets-landscape .text-page {
-    -fx-padding: 35px 40px;
-    -fx-spacing: 22px;
-    -fx-max-width: 800px;
+/* 成功按鈕 */
+.ios-button-success {
+    -fx-background-color: rgba(52, 199, 89, 0.3);
+    -fx-text-fill: white;
+    -fx-background-radius: 14px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 14px;
+    -fx-padding: 12 24 12 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.2), 10, 0, 0, 4);
 }
 
-/* 桌面直式的文字頁面 */
-.desktop-portrait .text-page {
-    -fx-padding: 40px 60px;
-    -fx-spacing: 26px;
-    -fx-max-width: 750px;
+.ios-button-success:hover {
+    -fx-background-color: rgba(52, 199, 89, 0.4);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.3), 14, 0, 0, 6);
 }
 
-/* 桌面橫式的文字頁面 */
-.desktop-landscape .text-page {
-    -fx-padding: 50px 80px;
-    -fx-spacing: 24px;
-    -fx-max-width: 900px;
+/* =========================== 圓形按鈕（FAB風格） =========================== */
+.ios-fab {
+    -fx-background-color: rgba(255, 255, 255, 0.25);
+    -fx-text-fill: white;
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-pref-width: 56px;
+    -fx-pref-height: 56px;
+    -fx-font-size: 20px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 16, 0, 0, 8);
 }
 
-/* 雙頁顯示樣式 */
-.two-page-container {
-    -fx-spacing: 40px;
+.ios-fab:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.35);
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10);
+}
+
+.ios-fab:pressed {
+    -fx-scale-x: 0.9;
+    -fx-scale-y: 0.9;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+/* =========================== 小型圓形按鈕 =========================== */
+.ios-circular-button {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-text-fill: white;
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1px;
+    -fx-pref-width: 42px;
+    -fx-pref-height: 42px;
+    -fx-font-size: 16px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 12, 0, 0, 6);
+}
+
+.ios-circular-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.28);
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 16, 0, 0, 8);
+}
+
+/* =========================== 輸入框 =========================== */
+.ios-text-field {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-text-fill: white;
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 12 16 12 16;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-prompt-text-fill: rgba(255, 255, 255, 0.6);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-text-field:focused {
+    -fx-border-color: rgba(10, 132, 255, 0.8);
+    -fx-border-width: 2px;
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.3), 12, 0, 0, 0);
+}
+
+/* =========================== 標籤 =========================== */
+.ios-label {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 2, 0, 0, 1);
+}
+
+.ios-label-title {
+    -fx-text-fill: white;
+    -fx-font-size: 28px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0, 0, 3);
+}
+
+.ios-label-subtitle {
+    -fx-text-fill: rgba(255, 255, 255, 0.8);
+    -fx-font-size: 18px;
+    -fx-font-weight: 600;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 3, 0, 0, 2);
+}
+
+/* =========================== 控制列 =========================== */
+.ios-control-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 16 24 16 24;
+    -fx-spacing: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 10);
+    -fx-background-radius: 0 0 24 24;
+}
+
+.ios-top-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 20 28 20 28;
+    -fx-spacing: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 15, 0, 0, 8);
+    -fx-background-radius: 0 0 28 28;
+}
+
+.ios-bottom-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 20 28 24 28;
+    -fx-spacing: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 15, 0, 0, -8);
+    -fx-background-radius: 28 28 0 0;
+}
+
+/* =========================== 狀態標籤 =========================== */
+.ios-status-label {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-background-radius: 20px;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
+    -fx-padding: 8 16 8 16;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 5);
+}
+
+.ios-page-indicator {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-text-fill: white;
+    -fx-background-radius: 22px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 22px;
+    -fx-padding: 10 18 10 18;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 12, 0, 0, 6);
+}
+
+.ios-time-indicator {
+    -fx-background-color: rgba(52, 199, 89, 0.3);
+    -fx-text-fill: white;
+    -fx-background-radius: 22px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 22px;
+    -fx-padding: 10 18 10 18;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.2), 12, 0, 0, 6);
+}
+
+/* =========================== 進度條 =========================== */
+.ios-progress-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-background-radius: 10px;
+    -fx-pref-height: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 6, 0, 0, 3);
+}
+
+.ios-progress-bar .bar {
+    -fx-background-color: linear-gradient(to right,
+        rgba(10, 132, 255, 0.9),
+        rgba(30, 144, 255, 0.9));
+    -fx-background-radius: 10px;
+    -fx-background-insets: 0;
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.4), 10, 0, 0, 0);
+}
+
+/* =========================== 檔案卡片 =========================== */
+.ios-file-card {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-radius: 20px;
+    -fx-background-radius: 20px;
+    -fx-border-width: 1px;
+    -fx-padding: 24;
+    -fx-spacing: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 20, 0, 0, 10);
+    -fx-cursor: hand;
     -fx-alignment: center;
 }
 
-.tablets-landscape .two-page-container .text-page {
-    -fx-max-width: 400px;
-    -fx-padding: 25px 20px;
+.ios-file-card:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 25, 0, 0, 15);
 }
 
-.desktop-landscape .two-page-container .text-page {
-    -fx-max-width: 450px;
-    -fx-padding: 30px 25px;
+.ios-file-icon-container {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-radius: 16px;
+    -fx-pref-width: 80px;
+    -fx-pref-height: 64px;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
 }
 
-/* =========================== 文字樣式 =========================== */
-
-/* 頁面標題 */
-.page-header {
+.ios-file-name {
     -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-text-alignment: center;
-}
-
-.tablets-portrait .page-header {
-    -fx-font-size: 22px;
-}
-
-.tablets-landscape .page-header {
-    -fx-font-size: 20px;
-}
-
-.desktop-portrait .page-header {
-    -fx-font-size: 20px;
-}
-
-.desktop-landscape .page-header {
-    -fx-font-size: 18px;
-}
-
-/* 段落文字 */
-.paragraph-text {
-    -fx-fill: #e0e0e0;
-    -fx-font-smoothing-type: lcd;
-}
-
-.tablets-portrait .paragraph-text {
-    -fx-font-size: 20px;
-    -fx-line-spacing: 8px;
-}
-
-.tablets-landscape .paragraph-text {
-    -fx-font-size: 18px;
-    -fx-line-spacing: 6px;
-}
-
-.desktop-portrait .paragraph-text {
-    -fx-font-size: 18px;
-    -fx-line-spacing: 6px;
-}
-
-.desktop-landscape .paragraph-text {
     -fx-font-size: 16px;
-    -fx-line-spacing: 4px;
+    -fx-font-weight: 600;
+    -fx-text-alignment: center;
+    -fx-wrap-text: true;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 2, 0, 0, 1);
 }
 
-/* 高亮文字 */
-.highlight-text {
-    -fx-fill: #000000;
-    -fx-background-color: #ffff00;
-    -fx-background-radius: 3px;
-    -fx-effect: dropshadow(one-pass-box, rgba(255,255,0,0.3), 2, 0, 0, 0);
+.ios-file-info {
+    -fx-text-fill: rgba(255, 255, 255, 0.7);
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-text-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 1, 0, 0, 1);
 }
 
-/* =========================== 控制面板樣式 =========================== */
-
-.control-panel {
-    -fx-background-color: linear-gradient(to bottom, #333333, #2a2a2a);
-    -fx-border-color: rgba(255, 255, 255, 0.1);
-    -fx-border-width: 0 0 1px 0;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.3), 5, 0, 0, 2);
-}
-
-.control-panel .separator {
-    -fx-background-color: rgba(255, 255, 255, 0.2);
-    -fx-pref-width: 1px;
-    -fx-pref-height: 25px;
-}
-
-/* =========================== 輸入控制項樣式 =========================== */
-
-.text-field {
-    -fx-background-color: #404040;
-    -fx-text-fill: white;
-    -fx-border-color: #666666;
-    -fx-border-radius: 5px;
-    -fx-background-radius: 5px;
-    -fx-font-size: 14px;
-    -fx-prompt-text-fill: #aaaaaa;
-}
-
-.text-field:focused {
-    -fx-border-color: #0078d4;
-    -fx-border-width: 2px;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,120,212,0.3), 5, 0, 0, 0);
-}
-
-.combo-box {
-    -fx-background-color: #404040;
-    -fx-text-fill: white;
-    -fx-border-color: #666666;
-    -fx-border-radius: 5px;
-    -fx-background-radius: 5px;
-    -fx-font-size: 14px;
-}
-
-.combo-box .list-cell {
-    -fx-background-color: #404040;
-    -fx-text-fill: white;
-    -fx-padding: 8px 12px;
-}
-
-.combo-box .list-cell:selected {
-    -fx-background-color: #0078d4;
-}
-
-/* =========================== 滾動條樣式 =========================== */
-
-.scroll-pane {
+/* =========================== 滾動面板 =========================== */
+.ios-scroll-pane {
     -fx-background-color: transparent;
     -fx-background: transparent;
+    -fx-background-radius: 16px;
 }
 
-.scroll-pane .viewport {
+.ios-scroll-pane .viewport {
     -fx-background-color: transparent;
+    -fx-background-radius: 16px;
 }
 
-.scroll-bar {
+.ios-scroll-pane .scroll-bar {
     -fx-background-color: transparent;
+    -fx-pref-width: 8px;
 }
 
-.scroll-bar .track {
-    -fx-background-color: rgba(64, 64, 64, 0.3);
-    -fx-background-radius: 8px;
+.ios-scroll-pane .scroll-bar .track {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
 }
 
-.scroll-bar .thumb {
-    -fx-background-color: rgba(255, 255, 255, 0.2);
-    -fx-background-radius: 8px;
-}
-
-.scroll-bar .thumb:hover {
+.ios-scroll-pane .scroll-bar .thumb {
     -fx-background-color: rgba(255, 255, 255, 0.4);
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 2);
 }
 
-.scroll-bar .thumb:pressed {
+.ios-scroll-pane .scroll-bar .thumb:hover {
     -fx-background-color: rgba(255, 255, 255, 0.6);
 }
 
-/* 平板模式下的滾動條 */
-.tablets-portrait .scroll-bar .track,
-.tablets-landscape .scroll-bar .track {
-    -fx-background-radius: 12px;
+.ios-scroll-pane .scroll-bar .thumb:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.8);
 }
 
-.tablets-portrait .scroll-bar .thumb,
-.tablets-landscape .scroll-bar .thumb {
-    -fx-background-radius: 12px;
-    -fx-pref-width: 12px;
+/* =========================== 樹狀檢視 =========================== */
+.ios-tree-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
-/* =========================== 進度指示器 =========================== */
+.ios-tree-view .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 10 16 10 16;
+    -fx-indent: 20;
+    -fx-background-radius: 12px;
+    -fx-font-weight: 500;
+}
 
-.progress-bar {
-    -fx-accent: #0078d4;
+.ios-tree-view .tree-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-tree-view .tree-cell:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-background-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 10, 0, 0, 5);
+}
+
+/* =========================== 清單檢視 =========================== */
+.ios-list-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.ios-list-view .list-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-text-fill: white;
+    -fx-padding: 16 20 16 20;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-width: 0 0 1 0;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-font-weight: 500;
+}
+
+.ios-list-view .list-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-list-view .list-cell:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 10, 0, 0, 5);
+}
+
+/* =========================== 對話框 =========================== */
+.ios-dialog {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-radius: 24px;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 40, 0, 0, 20);
+}
+
+.ios-dialog .header-panel {
     -fx-background-color: rgba(255, 255, 255, 0.1);
-    -fx-background-radius: 10px;
+    -fx-background-radius: 24px 24px 0 0;
+    -fx-padding: 24 32 24 32;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0 0 1 0;
 }
 
-.progress-bar .bar {
-    -fx-background-color: linear-gradient(to right, #0078d4, #40a9ff);
-    -fx-background-radius: 10px;
-    -fx-background-insets: 0;
+.ios-dialog .content {
+    -fx-background-color: transparent;
+    -fx-padding: 32;
 }
 
-.tablets-portrait .progress-bar,
-.tablets-landscape .progress-bar {
-    -fx-pref-height: 8px;
+.ios-dialog .button-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 0 0 24px 24px;
+    -fx-padding: 20 32 24 32;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 1 0 0 0;
+    -fx-spacing: 16;
 }
 
-.desktop-portrait .progress-bar,
-.desktop-landscape .progress-bar {
-    -fx-pref-height: 6px;
+/* =========================== 選項卡 =========================== */
+.ios-tab-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
-/* =========================== 載入指示器 =========================== */
-
-.loading-container {
-    -fx-background-color: rgba(0, 0, 0, 0.8);
-    -fx-background-radius: 15px;
-    -fx-padding: 40px;
-    -fx-spacing: 20px;
-    -fx-alignment: center;
+.ios-tab-pane .tab-header-area {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0;
 }
 
-.loading-indicator {
-    -fx-progress-color: #0078d4;
+.ios-tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: rgba(255, 255, 255, 0.7);
+    -fx-padding: 16 24 16 24;
+    -fx-background-radius: 16px 16px 0 0;
+    -fx-border-color: transparent;
+    -fx-font-weight: 600;
+}
+
+.ios-tab-pane .tab:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.25);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 8, 0, 0, 4);
+}
+
+.ios-tab-pane .tab:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-text-fill: white;
+}
+
+/* =========================== 滑桿 =========================== */
+.ios-slider {
     -fx-background-color: transparent;
 }
 
-.tablets-portrait .loading-indicator,
-.tablets-landscape .loading-indicator {
-    -fx-pref-width: 60px;
-    -fx-pref-height: 60px;
+.ios-slider .track {
+    -fx-background-color: rgba(255, 255, 255, 0.25);
+    -fx-background-radius: 8px;
+    -fx-pref-height: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 2);
 }
 
-.desktop-portrait .loading-indicator,
-.desktop-landscape .loading-indicator {
-    -fx-pref-width: 50px;
-    -fx-pref-height: 50px;
+.ios-slider .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.9);
+    -fx-background-radius: 50%;
+    -fx-pref-width: 24px;
+    -fx-pref-height: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 4);
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 50%;
 }
 
-.loading-label {
+.ios-slider .thumb:hover {
+    -fx-scale-x: 1.2;
+    -fx-scale-y: 1.2;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0, 0, 6);
+}
+
+/* =========================== 複選框 =========================== */
+.ios-check-box {
     -fx-text-fill: white;
+    -fx-font-size: 15px;
     -fx-font-weight: 500;
-    -fx-text-alignment: center;
+    -fx-spacing: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
 }
 
-.tablets-portrait .loading-label {
-    -fx-font-size: 18px;
+.ios-check-box .box {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-pref-width: 22px;
+    -fx-pref-height: 22px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 6, 0, 0, 3);
 }
 
-.tablets-landscape .loading-label,
-.desktop-portrait .loading-label {
-    -fx-font-size: 16px;
+.ios-check-box:selected .box {
+    -fx-background-color: rgba(10, 132, 255, 0.8);
+    -fx-border-color: rgba(10, 132, 255, 0.9);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.3), 8, 0, 0, 4);
 }
 
-.desktop-landscape .loading-label {
+.ios-check-box:selected .mark {
+    -fx-background-color: white;
+    -fx-padding: 3px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.ios-check-box:hover .box {
+    -fx-border-color: rgba(10, 132, 255, 0.6);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 8, 0, 0, 0);
+}
+
+/* =========================== 下拉選單 =========================== */
+.ios-combo-box {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-text-fill: white;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-border-width: 1px;
     -fx-font-size: 14px;
-}
-
-/* =========================== 通知樣式 =========================== */
-
-.notification {
-    -fx-background-color: rgba(0, 0, 0, 0.9);
-    -fx-background-radius: 10px;
-    -fx-padding: 15px 25px;
-    -fx-text-fill: white;
     -fx-font-weight: 500;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 5);
+    -fx-padding: 10 16 10 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
 }
 
-.notification-success {
-    -fx-border-color: #28a745;
-    -fx-border-width: 2px;
-    -fx-border-radius: 10px;
+.ios-combo-box .list-cell {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-text-fill: white;
+    -fx-padding: 12 18 12 18;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-width: 0 0 1 0;
+    -fx-font-weight: 500;
 }
 
-.notification-warning {
-    -fx-border-color: #ffc107;
-    -fx-border-width: 2px;
-    -fx-border-radius: 10px;
+.ios-combo-box .list-cell:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.4);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 6, 0, 0, 3);
 }
 
-.notification-error {
-    -fx-border-color: #dc3545;
-    -fx-border-width: 2px;
-    -fx-border-radius: 10px;
+.ios-combo-box .list-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* =========================== 主題變化 =========================== */
-
-/* 淺色主題 */
-.light-theme {
-    -fx-background-color: #ffffff;
+/* =========================== 表格檢視 =========================== */
+.ios-table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
+    -fx-background-radius: 20px;
 }
 
-.light-theme .text-page {
-    -fx-background-color: #ffffff;
-    -fx-border-color: rgba(0, 0, 0, 0.1);
+.ios-table-view .column-header {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+    -fx-font-size: 14px;
+    -fx-padding: 16 24 16 24;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0 1 1 0;
 }
 
-.light-theme .paragraph-text {
-    -fx-fill: #000000;
+.ios-table-view .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 14 0 14 0;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 0 0 1 0;
+    -fx-font-weight: 500;
 }
 
-.light-theme .page-header {
-    -fx-text-fill: #333333;
+.ios-table-view .table-row-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
 }
 
-.light-theme .control-panel {
-    -fx-background-color: linear-gradient(to bottom, #f8f9fa, #e9ecef);
-    -fx-border-color: rgba(0, 0, 0, 0.1);
+.ios-table-view .table-row-cell:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.25);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.15), 8, 0, 0, 4);
 }
 
-.light-theme .button {
-    -fx-background-color: linear-gradient(to bottom, #e9ecef, #dee2e6);
-    -fx-text-fill: #333333;
+.ios-table-view .table-cell {
+    -fx-text-fill: white;
+    -fx-padding: 0 24 0 24;
+    -fx-border-color: transparent;
+    -fx-font-weight: 500;
 }
 
-.light-theme .button:hover {
-    -fx-background-color: linear-gradient(to bottom, #dee2e6, #ced4da);
+/* =========================== 通知 =========================== */
+.ios-notification {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-background-radius: 20px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
+    -fx-padding: 16 24 16 24;
+    -fx-text-fill: white;
+    -fx-font-weight: 600;
+    -fx-font-size: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 20, 0, 0, 10);
 }
 
-/* 護眼主題 */
-.eye-care-theme {
-    -fx-background-color: #1a1a0f;
+.ios-notification-success {
+    -fx-background-color: rgba(52, 199, 89, 0.3);
+    -fx-border-color: rgba(52, 199, 89, 0.5);
 }
 
-.eye-care-theme .text-page {
-    -fx-background-color: #1a1a0f;
-    -fx-border-color: rgba(212, 212, 170, 0.2);
+.ios-notification-warning {
+    -fx-background-color: rgba(255, 204, 0, 0.3);
+    -fx-border-color: rgba(255, 204, 0, 0.5);
 }
 
-.eye-care-theme .paragraph-text {
-    -fx-fill: #d4d4aa;
+.ios-notification-error {
+    -fx-background-color: rgba(255, 59, 48, 0.3);
+    -fx-border-color: rgba(255, 59, 48, 0.5);
 }
 
-.eye-care-theme .page-header {
-    -fx-text-fill: #f0f0cc;
+/* =========================== 浮動面板 =========================== */
+.ios-floating-panel {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-radius: 24px;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 30, 0, 0, 15);
+    -fx-padding: 28;
 }
 
-.eye-care-theme .control-panel {
-    -fx-background-color: linear-gradient(to bottom, #2a2a1f, #1f1f15);
+/* =========================== 專注模式 =========================== */
+.ios-focus-mode-label {
+    -fx-background-color: rgba(88, 86, 214, 0.4);
+    -fx-text-fill: white;
+    -fx-background-radius: 28px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 28px;
+    -fx-padding: 14 28 14 28;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(88,86,214,0.3), 16, 0, 0, 8);
 }
 
-/* 復古主題 */
-.sepia-theme {
-    -fx-background-color: #f4ecd8;
+/* =========================== 書籤指示器 =========================== */
+.ios-bookmark-indicator {
+    -fx-background-color: rgba(255, 149, 0, 0.4);
+    -fx-background-radius: 0 18px 18px 0;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px 1px 1px 0;
+    -fx-border-radius: 0 18px 18px 0;
+    -fx-pref-width: 32px;
+    -fx-pref-height: 56px;
+    -fx-effect: dropshadow(gaussian, rgba(255,149,0,0.3), 12, 0, 0, 6);
 }
 
-.sepia-theme .text-page {
-    -fx-background-color: #f4ecd8;
-    -fx-border-color: rgba(93, 78, 55, 0.2);
+/* =========================== OCR狀態指示器 =========================== */
+.ios-ocr-status-container {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-radius: 24px;
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-width: 1px;
+    -fx-border-radius: 24px;
+    -fx-padding: 12 20 12 20;
+    -fx-spacing: 12;
+    -fx-alignment: center_left;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 12, 0, 0, 6);
 }
 
-.sepia-theme .paragraph-text {
-    -fx-fill: #5d4e37;
+.ios-ocr-status-indicator {
+    -fx-background-color: rgba(52, 199, 89, 0.8);
+    -fx-background-radius: 50%;
+    -fx-pref-width: 12px;
+    -fx-pref-height: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.5), 8, 0, 0, 0);
 }
 
-.sepia-theme .page-header {
-    -fx-text-fill: #3d2e17;
+.ios-ocr-status-text {
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
 }
 
-.sepia-theme .control-panel {
-    -fx-background-color: linear-gradient(to bottom, #f0e6d2, #e6dcc8);
+/* =========================== 載入指示器 =========================== */
+.ios-loading-container {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-background-radius: 24px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 24px;
+    -fx-padding: 32;
+    -fx-spacing: 20;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 30, 0, 0, 15);
 }
 
-.sepia-theme .button {
-    -fx-background-color: linear-gradient(to bottom, #e6dcc8, #dcd2be);
-    -fx-text-fill: #5d4e37;
+.ios-loading-text {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+    -fx-text-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 3, 0, 0, 2);
 }
 
-/* =========================== 動畫效果 =========================== */
-
-.page-transition {
-    -fx-transition: -fx-opacity 0.3s ease-in-out;
+.ios-loading-spinner {
+    -fx-progress-color: rgba(10, 132, 255, 0.8);
+    -fx-background-color: transparent;
+    -fx-pref-width: 48px;
+    -fx-pref-height: 48px;
 }
 
-.fade-in {
+/* =========================== 文字顯示區域 =========================== */
+.ios-text-page {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-background-radius: 24px;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 1px;
+    -fx-border-radius: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0, 0, 10);
+    -fx-padding: 40 48 40 48;
+}
+
+.ios-text-page .text {
+    -fx-fill: rgba(255, 255, 255, 0.95);
+    -fx-font-smoothing-type: lcd;
+    -fx-font-size: 16px;
+    -fx-font-weight: 400;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 1, 0, 0, 1);
+}
+
+/* =========================== 圖片顯示區域 =========================== */
+.ios-image-container {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 20px;
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 16, 0, 0, 8);
+}
+
+/* =========================== 分隔線 =========================== */
+.ios-separator {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-pref-height: 1px;
+    -fx-pref-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 2, 0, 0, 1);
+}
+
+.ios-separator.vertical {
+    -fx-pref-width: 1px;
+    -fx-pref-height: 32px;
+}
+
+/* =========================== 工具提示 =========================== */
+.ios-tooltip {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    -fx-padding: 12 18 12 18;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 16, 0, 0, 8);
+}
+
+/* =========================== 主題變體 =========================== */
+
+/* 夜間模式強化 */
+.ios-night-mode {
+    -fx-background-color: rgba(0, 0, 0, 0.3);
+}
+
+.ios-night-mode .ios-text-page {
+    -fx-background-color: rgba(0, 0, 0, 0.4);
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+}
+
+.ios-night-mode .ios-text-page .text {
+    -fx-fill: rgba(255, 255, 255, 0.9);
+}
+
+/* 護眼模式 */
+.ios-eye-care-mode {
+    -fx-background-color: rgba(139, 120, 93, 0.3);
+}
+
+.ios-eye-care-mode .ios-text-page {
+    -fx-background-color: rgba(139, 120, 93, 0.2);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+}
+
+.ios-eye-care-mode .ios-text-page .text {
+    -fx-fill: rgba(255, 248, 220, 0.9);
+}
+
+/* =========================== 動畫效果類 =========================== */
+.ios-fade-in {
     -fx-opacity: 0;
 }
 
-.fade-in:hover {
-    -fx-opacity: 1;
-}
-
-.slide-in-left {
-    -fx-translate-x: -100;
+.ios-slide-up {
+    -fx-translate-y: 40;
     -fx-opacity: 0;
 }
 
-.slide-in-right {
-    -fx-translate-x: 100;
-    -fx-opacity: 0;
-}
-
-.scale-in {
+.ios-scale-in {
     -fx-scale-x: 0.8;
     -fx-scale-y: 0.8;
     -fx-opacity: 0;
 }
 
-/* =========================== 全螢幕模式 =========================== */
-
-.fullscreen-mode .control-panel {
-    -fx-background-color: rgba(51, 51, 51, 0.95);
-    -fx-background-radius: 15px;
-    -fx-padding: 15px 20px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 15, 0, 0, 5);
+.ios-bounce-in {
+    -fx-scale-x: 0.3;
+    -fx-scale-y: 0.3;
+    -fx-opacity: 0;
 }
 
-.fullscreen-mode .text-page {
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 20, 0, 0, 10);
+/* =========================== 特殊效果 =========================== */
+.ios-glow-blue {
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.6), 20, 0, 0, 0);
 }
 
-/* =========================== 觸控優化 =========================== */
-
-/* 增大觸控目標 */
-.touch-optimized .button {
-    -fx-min-height: 50px;
-    -fx-min-width: 50px;
+.ios-glow-green {
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.6), 20, 0, 0, 0);
 }
 
-.touch-optimized .scroll-bar .thumb {
-    -fx-pref-width: 15px;
+.ios-glow-orange {
+    -fx-effect: dropshadow(gaussian, rgba(255,149,0,0.6), 20, 0, 0, 0);
 }
 
-.touch-optimized .text-field {
-    -fx-min-height: 50px;
+.ios-glow-red {
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.6), 20, 0, 0, 0);
+}
+
+/* =========================== 文字樣式 =========================== */
+.ios-text-primary {
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 2, 0, 0, 1);
+}
+
+.ios-text-secondary {
+    -fx-text-fill: rgba(255, 255, 255, 0.8);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 1, 0, 0, 1);
+}
+
+.ios-text-muted {
+    -fx-text-fill: rgba(255, 255, 255, 0.6);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 1, 0, 0, 1);
+}
+
+/* =========================== 邊距和間距工具類 =========================== */
+.ios-p-8 { -fx-padding: 8; }
+.ios-p-12 { -fx-padding: 12; }
+.ios-p-16 { -fx-padding: 16; }
+.ios-p-20 { -fx-padding: 20; }
+.ios-p-24 { -fx-padding: 24; }
+.ios-p-32 { -fx-padding: 32; }
+
+.ios-m-8 { -fx-spacing: 8; }
+.ios-m-12 { -fx-spacing: 12; }
+.ios-m-16 { -fx-spacing: 16; }
+.ios-m-20 { -fx-spacing: 20; }
+.ios-m-24 { -fx-spacing: 24; }
+.ios-m-32 { -fx-spacing: 32; }
+
+/* =========================== 圓角工具類 =========================== */
+.ios-rounded-8 { -fx-background-radius: 8px; -fx-border-radius: 8px; }
+.ios-rounded-12 { -fx-background-radius: 12px; -fx-border-radius: 12px; }
+.ios-rounded-16 { -fx-background-radius: 16px; -fx-border-radius: 16px; }
+.ios-rounded-20 { -fx-background-radius: 20px; -fx-border-radius: 20px; }
+.ios-rounded-24 { -fx-background-radius: 24px; -fx-border-radius: 24px; }
+.ios-rounded-full { -fx-background-radius: 50%; -fx-border-radius: 50%; }
+
+/* =========================== 陰影工具類 =========================== */
+.ios-shadow-sm {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-shadow-md {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 12, 0, 0, 6);
+}
+
+.ios-shadow-lg {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 16, 0, 0, 8);
+}
+
+.ios-shadow-xl {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0, 0, 10);
+}
+
+.ios-shadow-2xl {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 25, 0, 0, 15);
+}
+
+/* =========================== 特殊裝飾效果 =========================== */
+.ios-backdrop-blur {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+}
+
+.ios-vibrant-light {
+    -fx-background-color: rgba(255, 255, 255, 0.22);
+    -fx-border-color: rgba(255, 255, 255, 0.35);
+    -fx-border-width: 1.5px;
+}
+
+.ios-vibrant-dark {
+    -fx-background-color: rgba(0, 0, 0, 0.15);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-width: 1px;
+}
+
+/* =========================== 狀態指示器 =========================== */
+.ios-status-online {
+    -fx-background-color: rgba(52, 199, 89, 0.9);
+    -fx-background-radius: 50%;
+    -fx-pref-width: 14px;
+    -fx-pref-height: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.6), 10, 0, 0, 0);
+}
+
+.ios-status-offline {
+    -fx-background-color: rgba(255, 59, 48, 0.9);
+    -fx-background-radius: 50%;
+    -fx-pref-width: 14px;
+    -fx-pref-height: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.6), 10, 0, 0, 0);
+}
+
+.ios-status-processing {
+    -fx-background-color: rgba(255, 204, 0, 0.9);
+    -fx-background-radius: 50%;
+    -fx-pref-width: 14px;
+    -fx-pref-height: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(255,204,0,0.6), 10, 0, 0, 0);
+}
+
+/* =========================== 檔案類型圖示 =========================== */
+.ios-file-icon-pdf {
+    -fx-text-fill: rgba(255, 59, 48, 0.9);
+    -fx-font-size: 48px;
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.3), 12, 0, 0, 6);
+}
+
+.ios-file-icon-epub {
+    -fx-text-fill: rgba(10, 132, 255, 0.9);
+    -fx-font-size: 48px;
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.3), 12, 0, 0, 6);
+}
+
+.ios-file-icon-image {
+    -fx-text-fill: rgba(52, 199, 89, 0.9);
+    -fx-font-size: 48px;
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.3), 12, 0, 0, 6);
+}
+
+/* =========================== 搜尋框 =========================== */
+.ios-search-field {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-text-fill: white;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-radius: 20px;
+    -fx-background-radius: 20px;
+    -fx-border-width: 1px;
+    -fx-padding: 12 20 12 48;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-prompt-text-fill: rgba(255, 255, 255, 0.6);
+    -fx-pref-width: 320px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-search-field:focused {
+    -fx-border-color: rgba(10, 132, 255, 0.8);
+    -fx-border-width: 2px;
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.3), 16, 0, 0, 0);
+}
+
+/* =========================== 選單欄 =========================== */
+.ios-menu-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0 0 1 0;
+}
+
+.ios-menu-bar .menu {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 14 20 14 20;
+    -fx-background-radius: 12px;
+    -fx-font-weight: 600;
+}
+
+.ios-menu-bar .menu:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+}
+
+.ios-menu-bar .menu .context-menu {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 25, 0, 0, 15);
+}
+
+.ios-menu-bar .menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 12 24 12 24;
+    -fx-font-weight: 500;
+}
+
+.ios-menu-bar .menu .menu-item:hover {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-background-radius: 8px;
+}
+
+/* =========================== 響應式設計 =========================== */
+
+/* 平板模式 */
+.ios-tablet .ios-button {
+    -fx-min-height: 48px;
+    -fx-font-size: 16px;
+    -fx-padding: 16 32 16 32;
+}
+
+.ios-tablet .ios-text-field {
+    -fx-min-height: 48px;
+    -fx-font-size: 16px;
+    -fx-padding: 16 24 16 24;
+}
+
+.ios-tablet .ios-text-page {
+    -fx-padding: 32 40 32 40;
+    -fx-max-width: 700;
+}
+
+/* 桌面模式 */
+.ios-desktop .ios-button {
+    -fx-min-height: 38px;
+    -fx-font-size: 14px;
+    -fx-padding: 12 24 12 24;
+}
+
+.ios-desktop .ios-text-page {
+    -fx-padding: 48 56 48 56;
+    -fx-max-width: 900;
+}
+
+/* =========================== 主容器佈局 =========================== */
+.ios-main-layout {
+    -fx-background-color: linear-gradient(135deg,
+        rgba(255,255,255,0.05) 0%,
+        rgba(255,255,255,0.02) 50%,
+        rgba(255,255,255,0.08) 100%),
+        linear-gradient(45deg,
+        #667eea 0%,
+        #764ba2 25%,
+        #f093fb 50%,
+        #f5576c 75%,
+        #4facfe 100%);
+}
+
+.ios-center-pane {
+    -fx-background-color: transparent;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 5);
+}
+
+/* =========================== 導覽列樣式 =========================== */
+.ios-navigation-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 18 28 18 28;
+    -fx-spacing: 24;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 6);
+    -fx-background-radius: 0 0 28 28;
+}
+
+/* =========================== 側邊欄樣式 =========================== */
+.ios-sidebar {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 28;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 15, 0, 5, 0);
+}
+
+.ios-sidebar-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 14 20 14 20;
+    -fx-background-radius: 14px;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 14px;
+    -fx-font-weight: 500;
+}
+
+.ios-sidebar-item:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4);
+}
+
+.ios-sidebar-item:selected {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-border-color: rgba(10, 132, 255, 0.5);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 10, 0, 0, 5);
+}
+
+/* =========================== 工具欄樣式 =========================== */
+.ios-toolbar {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 20 28 20 28;
+    -fx-spacing: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 12, 0, 0, 6);
+}
+
+/* =========================== 特效按鈕組合 =========================== */
+.ios-button-group {
+    -fx-spacing: 12;
+    -fx-alignment: center;
+}
+
+.ios-button-group .ios-button {
+    -fx-min-width: 140px;
+}
+
+/* =========================== 擴展的玻璃效果 =========================== */
+.ios-glass-intense {
+    -fx-background-color: rgba(255, 255, 255, 0.25);
+    -fx-border-color: rgba(255, 255, 255, 0.4);
+    -fx-border-width: 1.5px;
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 25, 0, 0, 12);
+}
+
+.ios-glass-subtle {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 15, 0, 0, 8);
+}
+
+/* =========================== 文字樣式增強 =========================== */
+.ios-display-text {
+    -fx-text-fill: white;
+    -fx-font-size: 34px;
+    -fx-font-weight: 800;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0, 0, 4);
+}
+
+.ios-headline-text {
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0, 0, 2);
+}
+
+.ios-body-text {
+    -fx-text-fill: rgba(255, 255, 255, 0.9);
+    -fx-font-size: 16px;
+    -fx-font-weight: 500;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.ios-caption-text {
+    -fx-text-fill: rgba(255, 255, 255, 0.7);
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 1, 0, 0, 1);
+}
+
+/* =========================== 圖標樣式 =========================== */
+.ios-icon-small {
+    -fx-font-size: 16px;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 2, 0, 0, 1);
+}
+
+.ios-icon-medium {
+    -fx-font-size: 24px;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 3, 0, 0, 2);
+}
+
+.ios-icon-large {
+    -fx-font-size: 32px;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 4, 0, 0, 2);
 }
 
 /* =========================== 特殊狀態樣式 =========================== */
-
-/* 專注模式 */
-.focus-mode {
-    -fx-background-color: #000000;
+.ios-disabled {
+    -fx-opacity: 0.5;
+    -fx-cursor: default;
 }
 
-.focus-mode .text-page {
-    -fx-background-color: #0a0a0a;
-    -fx-border-color: transparent;
+.ios-loading {
+    -fx-opacity: 0.7;
+    -fx-cursor: wait;
+}
+
+.ios-selected {
+    -fx-background-color: rgba(10, 132, 255, 0.3);
+    -fx-border-color: rgba(10, 132, 255, 0.5);
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.2), 10, 0, 0, 5);
+}
+
+.ios-highlighted {
+    -fx-background-color: rgba(255, 204, 0, 0.2);
+    -fx-border-color: rgba(255, 204, 0, 0.4);
+    -fx-effect: dropshadow(gaussian, rgba(255,204,0,0.3), 12, 0, 0, 6);
+}
+
+/* =========================== 彈出效果 =========================== */
+.ios-popover {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-background-radius: 20px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 35, 0, 0, 18);
+    -fx-padding: 28;
+}
+
+.ios-popover-arrow {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-pref-width: 16px;
+    -fx-pref-height: 16px;
+    -fx-rotate: 45;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-width: 1px;
+}
+
+/* =========================== 卡片堆疊效果 =========================== */
+.ios-card-stack {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4),
+                dropshadow(gaussian, rgba(0,0,0,0.08), 16, 0, 0, 8),
+                dropshadow(gaussian, rgba(0,0,0,0.06), 24, 0, 0, 12);
+}
+
+/* =========================== 毛玻璃變體 =========================== */
+.ios-frost-light {
+    -fx-background-color: rgba(255, 255, 255, 0.3);
+    -fx-border-color: rgba(255, 255, 255, 0.5);
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+}
+
+.ios-frost-medium {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-border-color: rgba(255, 255, 255, 0.35);
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+}
+
+.ios-frost-heavy {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-border-width: 1px;
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+}
+
+/* =========================== 漸變邊框效果 =========================== */
+.ios-gradient-border {
+    -fx-border-image-source: linear-gradient(45deg,
+        rgba(10, 132, 255, 0.8) 0%,
+        rgba(52, 199, 89, 0.8) 25%,
+        rgba(255, 204, 0, 0.8) 50%,
+        rgba(255, 149, 0, 0.8) 75%,
+        rgba(255, 59, 48, 0.8) 100%);
+    -fx-border-image-slice: 1;
+    -fx-border-width: 2px;
+    -fx-border-radius: 16px;
+    -fx-background-radius: 16px;
+}
+
+/* =========================== 脈衝動畫效果 =========================== */
+.ios-pulse {
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.4), 0, 0, 0, 0);
+}
+
+.ios-pulse-green {
+    -fx-effect: dropshadow(gaussian, rgba(52,199,89,0.4), 0, 0, 0, 0);
+}
+
+.ios-pulse-orange {
+    -fx-effect: dropshadow(gaussian, rgba(255,149,0,0.4), 0, 0, 0, 0);
+}
+
+.ios-pulse-red {
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.4), 0, 0, 0, 0);
+}
+
+/* =========================== 網格佈局 =========================== */
+.ios-grid-container {
+    -fx-background-color: transparent;
+    -fx-padding: 32;
+    -fx-hgap: 24;
+    -fx-vgap: 24;
+}
+
+.ios-grid-item {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-radius: 18px;
+    -fx-background-radius: 18px;
+    -fx-border-width: 1px;
+    -fx-padding: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 16, 0, 0, 8);
+    -fx-cursor: hand;
+}
+
+.ios-grid-item:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 20, 0, 0, 10);
+}
+
+/* =========================== 輔助功能支援 =========================== */
+.ios-focus-ring {
+    -fx-border-color: rgba(10, 132, 255, 0.8);
+    -fx-border-width: 3px;
+    -fx-border-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(10,132,255,0.4), 12, 0, 0, 0);
+}
+
+.ios-high-contrast {
+    -fx-background-color: rgba(0, 0, 0, 0.8);
+    -fx-text-fill: white;
+    -fx-border-color: white;
+    -fx-border-width: 2px;
+}
+
+/* =========================== 印刷模式 =========================== */
+.ios-print-mode {
+    -fx-background-color: white;
+    -fx-text-fill: black;
+    -fx-border-color: black;
     -fx-effect: none;
 }
 
-/* 夜間模式 */
-.night-mode {
-    -fx-background-color: #000000;
-}
-
-.night-mode .text-page {
-    -fx-background-color: #000000;
-    -fx-border-color: rgba(255, 255, 255, 0.05);
-}
-
-.night-mode .paragraph-text {
-    -fx-fill: #e0e0e0;
-}
-
-.night-mode .page-header {
-    -fx-text-fill: #ffffff;
-}
-
-/* =========================== 錯誤和提示樣式 =========================== */
-
-.error-message {
-    -fx-text-fill: #ff6b6b;
-    -fx-background-color: rgba(255, 107, 107, 0.1);
-    -fx-background-radius: 8px;
-    -fx-padding: 15px;
-    -fx-border-color: #ff6b6b;
+.ios-print-mode .ios-text-page {
+    -fx-background-color: white;
+    -fx-border-color: black;
     -fx-border-width: 1px;
-    -fx-border-radius: 8px;
 }
 
-.success-message {
-    -fx-text-fill: #51cf66;
-    -fx-background-color: rgba(81, 207, 102, 0.1);
-    -fx-background-radius: 8px;
-    -fx-padding: 15px;
-    -fx-border-color: #51cf66;
-    -fx-border-width: 1px;
-    -fx-border-radius: 8px;
+.ios-print-mode .ios-text-page .text {
+    -fx-fill: black;
 }
 
-.info-message {
-    -fx-text-fill: #74c0fc;
-    -fx-background-color: rgba(116, 192, 252, 0.1);
-    -fx-background-radius: 8px;
-    -fx-padding: 15px;
-    -fx-border-color: #74c0fc;
-    -fx-border-width: 1px;
-    -fx-border-radius: 8px;
-}
+/* =========================== 媒體查詢模擬 =========================== */
 
-/* =========================== 對話框樣式 =========================== */
-
-.dialog-pane {
-    -fx-background-color: #2b2b2b;
-    -fx-background-radius: 15px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 20, 0, 0, 10);
-}
-
-.dialog-pane .header-panel {
-    -fx-background-color: #333333;
-    -fx-background-radius: 15px 15px 0 0;
-    -fx-padding: 20px;
-}
-
-.dialog-pane .content {
-    -fx-background-color: #2b2b2b;
-    -fx-padding: 20px;
-}
-
-.dialog-pane .button-bar {
-    -fx-background-color: #333333;
-    -fx-background-radius: 0 0 15px 15px;
-    -fx-padding: 15px 20px;
-}
-
-/* =========================== 設定面板樣式 =========================== */
-
-.settings-panel {
-    -fx-background-color: #2b2b2b;
-    -fx-padding: 25px;
-    -fx-spacing: 20px;
-}
-
-.settings-section {
-    -fx-background-color: #333333;
-    -fx-background-radius: 10px;
-    -fx-padding: 20px;
-    -fx-spacing: 15px;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);
-}
-
-.settings-title {
-    -fx-text-fill: white;
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-}
-
-.settings-label {
-    -fx-text-fill: #cccccc;
-    -fx-font-size: 14px;
-}
-
-/* =========================== 響應式斷點媒體查詢模擬 =========================== */
-
-/* 小屏幕平板 (寬度 < 600px) */
-.small-tablet .button {
-    -fx-font-size: 18px;
-    -fx-min-height: 55px;
-    -fx-padding: 18px 30px;
-}
-
-.small-tablet .control-panel {
-    -fx-padding: 25px 20px;
-    -fx-spacing: 25px;
-}
-
-.small-tablet .text-page {
-    -fx-padding: 25px 20px;
-    -fx-max-width: 580px;
-}
-
-.small-tablet .paragraph-text {
-    -fx-font-size: 22px;
-    -fx-line-spacing: 10px;
-}
-
-/* 大屏幕桌面 (寬度 > 1600px) */
-.large-desktop .text-page {
-    -fx-max-width: 1000px;
-    -fx-padding: 60px 100px;
-}
-
-.large-desktop .paragraph-text {
+/* 小螢幕裝置 */
+.ios-small-screen .ios-button {
+    -fx-min-height: 44px;
     -fx-font-size: 16px;
-    -fx-line-spacing: 4px;
+    -fx-padding: 14 20 14 20;
 }
 
-.large-desktop .two-page-container .text-page {
-    -fx-max-width: 480px;
-    -fx-padding: 40px 35px;
+.ios-small-screen .ios-text-field {
+    -fx-min-height: 44px;
+    -fx-font-size: 16px;
+    -fx-padding: 14 18 14 18;
 }
 
-/* =========================== 無障礙輔助功能 =========================== */
-
-.high-contrast .text-page {
-    -fx-background-color: #000000;
-    -fx-border-color: #ffffff;
-    -fx-border-width: 2px;
+/* 大螢幕裝置 */
+.ios-large-screen .ios-button {
+    -fx-min-height: 40px;
+    -fx-font-size: 15px;
+    -fx-padding: 12 28 12 28;
 }
 
-.high-contrast .paragraph-text {
-    -fx-fill: #ffffff;
-    -fx-font-weight: bold;
+.ios-large-screen .ios-text-field {
+    -fx-min-height: 40px;
+    -fx-font-size: 15px;
+    -fx-padding: 12 20 12 20;
 }
 
-.high-contrast .button {
-    -fx-background-color: #ffffff;
-    -fx-text-fill: #000000;
-    -fx-border-color: #000000;
-    -fx-border-width: 2px;
-}
+/* =========================== 結束標記 =========================== */
 
-/* 大字體模式 */
-.large-font .paragraph-text {
-    -fx-font-size: 24px;
-    -fx-line-spacing: 12px;
-}
-
-.large-font .page-header {
-    -fx-font-size: 28px;
-}
-
-.large-font .button {
-    -fx-font-size: 18px;
-    -fx-min-height: 60px;
-}
-
-/* =========================== 工具提示樣式 =========================== */
-
-.tooltip {
-    -fx-background-color: rgba(0, 0, 0, 0.95);
-    -fx-text-fill: white;
-    -fx-background-radius: 8px;
-    -fx-padding: 10px 15px;
-    -fx-font-size: 13px;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.4), 8, 0, 0, 4);
-}
-
-/* =========================== 印刷優化 =========================== */
-
-@media print {
-    .control-panel {
-        -fx-background-color: transparent;
-        -fx-border-width: 0;
-    }
-
-    .text-page {
-        -fx-background-color: white;
-        -fx-border-color: black;
-        -fx-effect: none;
-    }
-
-    .paragraph-text {
-        -fx-fill: black;
-    }
-
-    .page-header {
-        -fx-text-fill: black;
-    }
-}
+/* 這個CSS檔案提供了完整的iOS風格玻璃質感設計系統
+   包含了所有必要的UI元件樣式和互動效果
+   可以直接應用到JavaFX應用程式中 */
