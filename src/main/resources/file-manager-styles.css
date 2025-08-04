@@ -1,0 +1,73 @@
+/* =========================== 檔案管理器專用iOS風格樣式 =========================== */
+/* 
+專門為JavaFX檔案管理器設計的現代化iOS風格樣式
+與主樣式表配合使用，提供最佳的檔案瀏覽體驗
+*/
+
+/* =========================== 檔案管理器主容器 =========================== */
+.file-manager-stage {
+    -fx-background-color: 
+        /* 主背景漸變 - 檔案管理器專用深色調 */
+        linear-gradient(135deg,
+            rgba(20, 20, 26, 0.98) 0%,
+            rgba(28, 28, 36, 0.96) 25%,
+            rgba(24, 24, 32, 0.98) 50%,
+            rgba(32, 32, 40, 0.96) 75%,
+            rgba(22, 22, 30, 0.99) 100%),
+        /* 檔案管理器光暈效果 */
+        radial-gradient(circle at 20% 30%,
+            rgba(10, 132, 255, 0.06) 0%,
+            rgba(52, 199, 89, 0.03) 40%,
+            transparent 70%),
+        radial-gradient(circle at 80% 70%,
+            rgba(255, 149, 0, 0.05) 0%,
+            rgba(255, 204, 0, 0.02) 40%,
+            transparent 70%);
+}
+
+/* =========================== 工具列樣式 =========================== */
+.file-manager-toolbar {
+    -fx-background-color: 
+        linear-gradient(180deg,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(255, 255, 255, 0.06) 50%,
+            rgba(255, 255, 255, 0.04) 100%);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 0 0 0.5 0;
+    -fx-padding: 14 20 14 20;
+    -fx-spacing: 14;
+    -fx-effect: 
+        dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4),
+        innershadow(gaussian, rgba(255,255,255,0.02), 2, 0, 0, 1);
+    -fx-background-radius: 0 0 18 18;
+}
+
+/* 檔案卡片樣式 */
+.file-card-modern {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 0.5px;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-padding: 16;
+    -fx-spacing: 10;
+    -fx-alignment: center;
+    -fx-cursor: hand;
+    -fx-pref-width: 150;
+    -fx-pref-height: 130;
+    -fx-effect: 
+        dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 4),
+        innershadow(gaussian, rgba(255,255,255,0.02), 2, 0, 0, 1);
+}
+
+.file-card-modern:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: 
+        dropshadow(gaussian, rgba(0,0,0,0.12), 12, 0, 0, 6),
+        innershadow(gaussian, rgba(255,255,255,0.04), 3, 0, 0, 1);
+}
+
+/* 其他檔案管理器樣式... */
