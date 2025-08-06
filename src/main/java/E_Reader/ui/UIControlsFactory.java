@@ -1,6 +1,7 @@
 package E_Reader.ui;
 
 import E_Reader.utils.AlertHelper;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -566,17 +567,39 @@ public class UIControlsFactory {
         dialog.setTitle("⚙️ 應用程式設置");
         dialog.setHeaderText("個人化你的閱讀體驗");
 
-        // iOS风格对话框样式 - 修复版本（增强可见性和对比度）
+        // 修復：增強對話框樣式 - 提高背景對比度和邊框可見性
         dialog.getDialogPane().setStyle(
                 "-fx-background-color: linear-gradient(to bottom, " +
-                        "rgba(35,35,35,0.98), rgba(28,28,28,0.98)); " +
-                        "-fx-border-color: rgba(255,255,255,0.35); " +
-                        "-fx-border-width: 1; " +
+                        "rgba(45,45,45,0.98), rgba(35,35,35,0.98)); " +
+                        "-fx-border-color: rgba(255,255,255,0.6); " +
+                        "-fx-border-width: 2; " +
                         "-fx-border-radius: 16; " +
                         "-fx-background-radius: 16; " +
-                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 20, 0, 0, 5); " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 25, 0, 0, 8); " +
                         "-fx-font-family: 'SF Pro Display', '.SF NS Text', 'Helvetica Neue', sans-serif;"
         );
+
+        // 修復：強制設置對話框內容區域的文字顏色
+        Platform.runLater(() -> {
+            dialog.getDialogPane().lookupAll(".label").forEach(node -> {
+                node.setStyle(node.getStyle() + "; -fx-text-fill: white !important;");
+            });
+
+            dialog.getDialogPane().lookupAll(".text").forEach(node -> {
+                node.setStyle(node.getStyle() + "; -fx-fill: white !important;");
+            });
+
+            // 設置標題區域
+            if (dialog.getDialogPane().lookup(".header-panel") != null) {
+                dialog.getDialogPane().lookup(".header-panel").setStyle(
+                        "-fx-text-fill: white !important; " +
+                                "-fx-background-color: rgba(55,55,55,0.95); " +
+                                "-fx-border-color: rgba(255,255,255,0.3); " +
+                                "-fx-border-width: 0 0 1 0; " +
+                                "-fx-padding: 15;"
+                );
+            }
+        });
 
         // 修复对话框标题文字颜色
         dialog.getDialogPane().lookup(".header-panel").setStyle(
@@ -586,29 +609,51 @@ public class UIControlsFactory {
                         "-fx-border-width: 0 0 1 0;"
         );
 
-        // 创建TabPane来组织不同设置页面
         TabPane tabPane = new TabPane();
         tabPane.setStyle(
-                "-fx-background-color: transparent; " +
+                "-fx-background-color: rgba(40,40,40,0.9); " +
                         "-fx-tab-min-width: 120; " +
-                        "-fx-tab-max-width: 150;"
+                        "-fx-tab-max-width: 150; " +
+                        "-fx-border-color: rgba(255,255,255,0.2); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8;"
         );
 
-        // 修复Tab标签的文字颜色
-        tabPane.lookupAll(".tab").forEach(node -> {
-            node.setStyle("-fx-text-fill: white; -fx-background-color: rgba(45,45,45,0.8);");
+        // 修復：Tab標籤文字顏色
+        Platform.runLater(() -> {
+                    tabPane.lookupAll(".tab").forEach(node -> {
+                        node.setStyle(
+                                "-fx-text-fill: white !important; " +
+                                        "-fx-background-color: rgba(55,55,55,0.9); " +
+                                        "-fx-border-color: rgba(255,255,255,0.3); " +
+                                        "-fx-border-width: 1; " +
+                                        "-fx-border-radius: 8 8 0 0; " +
+                                        "-fx-background-radius: 8 8 0 0;"
+                        );
+                    });
+            tabPane.lookupAll(".tab:selected").forEach(node -> {
+                node.setStyle(
+                        "-fx-text-fill: white !important; " +
+                                "-fx-background-color: rgba(70,70,70,0.95); " +
+                                "-fx-border-color: rgba(52,152,219,0.8); " +
+                                "-fx-border-width: 2; " +
+                                "-fx-border-radius: 8 8 0 0; " +
+                                "-fx-background-radius: 8 8 0 0;"
+                );
+            });
         });
 
-        // 1. 外观主题标签页
-        Tab themeTab = createThemeTab(controller);
+        // 1. 外觀主題標籤頁
+        Tab themeTab = createFixedThemeTab(controller);
         themeTab.setText("🎨 外觀");
 
-        // 2. OCR设置标签页
-        Tab ocrTab = createOcrTab(controller);
+        // 2. OCR設置標籤頁
+        Tab ocrTab = createFixedOcrTab(controller);
         ocrTab.setText("🔧 OCR");
 
-        // 3. 功能选项标签页
-        Tab functionsTab = createFunctionsTab(controller);
+        // 3. 功能選項標籤頁
+        Tab functionsTab = createFixedFunctionsTab(controller);
         functionsTab.setText("⚙️ 功能");
 
         tabPane.getTabs().addAll(themeTab, ocrTab, functionsTab);
@@ -616,30 +661,411 @@ public class UIControlsFactory {
         dialog.getDialogPane().setContent(tabPane);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        // 自定义按钮样式 - 修复版本
-        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        // 修復：自定義按鈕樣式
+        Platform.runLater(() -> {
+            Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+            Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
 
-        okButton.setStyle(ACCENT_BUTTON_STYLE);
-        cancelButton.setStyle(
-                "-fx-background-color: rgba(60,60,60,0.8); " +
-                        "-fx-border-color: rgba(255,255,255,0.3); " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 8; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 12px; " +
-                        "-fx-font-weight: 600; " +
-                        "-fx-padding: 8 16 8 16; " +
-                        "-fx-cursor: hand;"
-        );
+            if (okButton != null) {
+                okButton.setStyle(
+                        "-fx-background-color: linear-gradient(to bottom, " +
+                                "rgba(52,152,219,0.9), rgba(41,128,185,0.9)); " +
+                                "-fx-border-color: rgba(52,152,219,0.8); " +
+                                "-fx-border-width: 2; " +
+                                "-fx-border-radius: 10; " +
+                                "-fx-background-radius: 10; " +
+                                "-fx-text-fill: white !important; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-font-weight: 700; " +
+                                "-fx-padding: 10 20 10 20; " +
+                                "-fx-cursor: hand; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.5), 8, 0, 0, 3);"
+                );
+            }
 
-        dialog.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
-                saveAllSettings(controller, themeTab, ocrTab, functionsTab);
-                controller.showNotification("設置以保存", "你的偏好設置已成功更新");
+            if (cancelButton != null) {
+                cancelButton.setStyle(
+                        "-fx-background-color: rgba(70,70,70,0.9); " +
+                                "-fx-border-color: rgba(255,255,255,0.4); " +
+                                "-fx-border-width: 2; " +
+                                "-fx-border-radius: 10; " +
+                                "-fx-background-radius: 10; " +
+                                "-fx-text-fill: white !important; " +
+                                "-fx-font-size: 14px; " +
+                                "-fx-font-weight: 600; " +
+                                "-fx-padding: 10 20 10 20; " +
+                                "-fx-cursor: hand;"
+                );
             }
         });
+
+        // 確保對話框完全載入後再顯示
+        Platform.runLater(() -> {
+            dialog.showAndWait().ifPresent(result -> {
+                if (result == ButtonType.OK) {
+                    saveAllSettings(controller, themeTab, ocrTab, functionsTab);
+                    controller.showNotification("設置已保存", "你的偏好設置已成功更新");
+                }
+            });
+        });
+    }
+
+    private Tab createFixedFunctionsTab(MainController controller) {
+        Tab tab = new Tab();
+
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(25));
+        content.setStyle(
+                "-fx-background-color: rgba(50,50,50,0.95); " +
+                        "-fx-border-color: rgba(255,255,255,0.2); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8;"
+        );
+
+        // 主題選擇區塊
+        VBox themeSection = createFixedSettingsSection("🎨 外觀主題", "選擇你喜歡的風格");
+
+        // 主題預覽網格
+        VBox themePreviewContainer = new VBox(15);
+
+        // 當前主題顯示 - 修復版本（增強可見性）
+        Label currentThemeLabel = new Label("當前主題: " + controller.getSettingsManager().getCurrentTheme().getDisplayName());
+        currentThemeLabel.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 15px; " +
+                        "-fx-background-color: rgba(52,152,219,0.4); " +
+                        "-fx-padding: 12 18 12 18; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: rgba(52,152,219,0.7); " +
+                        "-fx-border-width: 2; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.3), 5, 0, 0, 2);"
+        );
+
+        // 主題選項區域
+        VBox themeOptions = new VBox(12);
+        ToggleGroup themeGroup = new ToggleGroup();
+
+        for (E_Reader.settings.SettingsManager.ThemeMode theme : E_Reader.settings.SettingsManager.ThemeMode.values()) {
+            HBox themeOption = createFixedThemePreviewOption(theme, themeGroup, controller);
+            themeOptions.getChildren().add(themeOption);
+        }
+
+        // 設置當前選中的主題
+        themeGroup.getToggles().forEach(toggle -> {
+            RadioButton rb = (RadioButton) toggle;
+            if (rb.getText().equals(controller.getSettingsManager().getCurrentTheme().getDisplayName())) {
+                rb.setSelected(true);
+            }
+        });
+
+        // 即時預覽提示 - 修復版本（增強可見性）
+        Label previewTip = new Label("💡 提示：選擇主題後會立即預覽效果");
+        previewTip.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-size: 13px; " +
+                        "-fx-font-weight: 500; " +
+                        "-fx-background-color: rgba(255,193,7,0.2); " +
+                        "-fx-padding: 12 18 12 18; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: rgba(255,193,7,0.5); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 10;"
+        );
+
+        themePreviewContainer.getChildren().addAll(currentThemeLabel, themeOptions, previewTip);
+        themeSection.getChildren().add(themePreviewContainer);
+
+        // 分隔線
+        Separator separator = new Separator();
+        separator.setStyle("-fx-background-color: rgba(255,255,255,0.4); -fx-border-color: rgba(255,255,255,0.4);");
+
+        content.getChildren().addAll(themeSection, separator);
+
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle(
+                "-fx-background-color: transparent; " +
+                        "-fx-background: transparent; " +
+                        "-fx-border-color: transparent;"
+        );
+
+        tab.setContent(scrollPane);
+        return tab;
+    }
+
+    private Tab createFixedOcrTab(MainController controller) {
+        Tab tab = new Tab();
+
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(25));
+        content.setStyle(
+                "-fx-background-color: rgba(50,50,50,0.95); " +
+                        "-fx-border-color: rgba(255,255,255,0.2); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8;"
+        );
+
+        // 主題選擇區塊
+        VBox themeSection = createFixedSettingsSection("🎨 外觀主題", "選擇你喜歡的風格");
+
+        // 主題預覽網格
+        VBox themePreviewContainer = new VBox(15);
+
+        // 當前主題顯示 - 修復版本（增強可見性）
+        Label currentThemeLabel = new Label("當前主題: " + controller.getSettingsManager().getCurrentTheme().getDisplayName());
+        currentThemeLabel.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 15px; " +
+                        "-fx-background-color: rgba(52,152,219,0.4); " +
+                        "-fx-padding: 12 18 12 18; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: rgba(52,152,219,0.7); " +
+                        "-fx-border-width: 2; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.3), 5, 0, 0, 2);"
+        );
+
+        // 主題選項區域
+        VBox themeOptions = new VBox(12);
+        ToggleGroup themeGroup = new ToggleGroup();
+
+        for (E_Reader.settings.SettingsManager.ThemeMode theme : E_Reader.settings.SettingsManager.ThemeMode.values()) {
+            HBox themeOption = createFixedThemePreviewOption(theme, themeGroup, controller);
+            themeOptions.getChildren().add(themeOption);
+        }
+
+        // 設置當前選中的主題
+        themeGroup.getToggles().forEach(toggle -> {
+            RadioButton rb = (RadioButton) toggle;
+            if (rb.getText().equals(controller.getSettingsManager().getCurrentTheme().getDisplayName())) {
+                rb.setSelected(true);
+            }
+        });
+
+        // 即時預覽提示 - 修復版本（增強可見性）
+        Label previewTip = new Label("💡 提示：選擇主題後會立即預覽效果");
+        previewTip.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-size: 13px; " +
+                        "-fx-font-weight: 500; " +
+                        "-fx-background-color: rgba(255,193,7,0.2); " +
+                        "-fx-padding: 12 18 12 18; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: rgba(255,193,7,0.5); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 10;"
+        );
+
+        themePreviewContainer.getChildren().addAll(currentThemeLabel, themeOptions, previewTip);
+        themeSection.getChildren().add(themePreviewContainer);
+
+        // 分隔線
+        Separator separator = new Separator();
+        separator.setStyle("-fx-background-color: rgba(255,255,255,0.4); -fx-border-color: rgba(255,255,255,0.4);");
+
+        content.getChildren().addAll(themeSection, separator);
+
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle(
+                "-fx-background-color: transparent; " +
+                        "-fx-background: transparent; " +
+                        "-fx-border-color: transparent;"
+        );
+
+        tab.setContent(scrollPane);
+        return tab;
+    }
+
+    /* 修復版本：創建外觀主題標籤頁 - 解決文字可見性問題*/
+    private Tab createFixedThemeTab(MainController controller) {
+        Tab tab = new Tab();
+
+        VBox content = new VBox(20);
+        content.setPadding(new Insets(25));
+        content.setStyle(
+                "-fx-background-color: rgba(50,50,50,0.95); " +
+                        "-fx-border-color: rgba(255,255,255,0.2); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8;"
+        );
+
+        // 主題選擇區塊
+        VBox themeSection = createFixedSettingsSection("🎨 外觀主題", "選擇你喜歡的風格");
+
+        // 主題預覽網格
+        VBox themePreviewContainer = new VBox(15);
+
+        // 當前主題顯示 - 修復版本（增強可見性）
+        Label currentThemeLabel = new Label("當前主題: " + controller.getSettingsManager().getCurrentTheme().getDisplayName());
+        currentThemeLabel.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-font-size: 15px; " +
+                        "-fx-background-color: rgba(52,152,219,0.4); " +
+                        "-fx-padding: 12 18 12 18; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: rgba(52,152,219,0.7); " +
+                        "-fx-border-width: 2; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.3), 5, 0, 0, 2);"
+        );
+
+        // 主題選項區域
+        VBox themeOptions = new VBox(12);
+        ToggleGroup themeGroup = new ToggleGroup();
+
+        for (E_Reader.settings.SettingsManager.ThemeMode theme : E_Reader.settings.SettingsManager.ThemeMode.values()) {
+            HBox themeOption = createFixedThemePreviewOption(theme, themeGroup, controller);
+            themeOptions.getChildren().add(themeOption);
+        }
+
+        // 設置當前選中的主題
+        themeGroup.getToggles().forEach(toggle -> {
+            RadioButton rb = (RadioButton) toggle;
+            if (rb.getText().equals(controller.getSettingsManager().getCurrentTheme().getDisplayName())) {
+                rb.setSelected(true);
+            }
+        });
+
+        // 即時預覽提示 - 修復版本（增強可見性）
+        Label previewTip = new Label("💡 提示：選擇主題後會立即預覽效果");
+        previewTip.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-size: 13px; " +
+                        "-fx-font-weight: 500; " +
+                        "-fx-background-color: rgba(255,193,7,0.2); " +
+                        "-fx-padding: 12 18 12 18; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: rgba(255,193,7,0.5); " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 10;"
+        );
+
+        themePreviewContainer.getChildren().addAll(currentThemeLabel, themeOptions, previewTip);
+        themeSection.getChildren().add(themePreviewContainer);
+
+        // 分隔線
+        Separator separator = new Separator();
+        separator.setStyle("-fx-background-color: rgba(255,255,255,0.4); -fx-border-color: rgba(255,255,255,0.4);");
+
+        content.getChildren().addAll(themeSection, separator);
+
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle(
+                "-fx-background-color: transparent; " +
+                        "-fx-background: transparent; " +
+                        "-fx-border-color: transparent;"
+        );
+
+        tab.setContent(scrollPane);
+        return tab;
+    }
+
+    /**
+     * 修復版本：創建設定區塊的輔助方法 - 解決文字可見性問題
+     */
+    private VBox createFixedSettingsSection(String title, String description) {
+        VBox section = new VBox(12);
+
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-size: 18px; " +
+                        "-fx-font-weight: 700; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 2, 0, 0, 1);"
+        );
+
+        Label descLabel = new Label(description);
+        descLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.9) !important; " +
+                        "-fx-font-size: 13px; " +
+                        "-fx-font-weight: 400; " +
+                        "-fx-wrap-text: true;"
+        );
+
+        section.getChildren().addAll(titleLabel, descLabel);
+        return section;
+    }
+
+    /**
+     * 修復版本：創建主題預覽選項 - 解決文字可見性問題
+     */
+    private HBox createFixedThemePreviewOption(E_Reader.settings.SettingsManager.ThemeMode theme,
+                                               ToggleGroup group, MainController controller) {
+        HBox option = new HBox(15);
+        option.setAlignment(Pos.CENTER_LEFT);
+        option.setPadding(new Insets(15));
+        option.setStyle(
+                "-fx-background-color: rgba(60,60,60,0.9); " +
+                        "-fx-border-color: rgba(255,255,255,0.4); " +
+                        "-fx-border-width: 2; " +
+                        "-fx-border-radius: 12; " +
+                        "-fx-background-radius: 12; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0, 0, 2);"
+        );
+
+        // 主題預覽色塊 - 修復版本
+        VBox colorPreview = new VBox(0);
+        colorPreview.setPrefSize(80, 50);
+        colorPreview.setAlignment(Pos.CENTER);
+        colorPreview.setStyle(
+                "-fx-background-color: " + theme.getBackgroundColor() + "; " +
+                        "-fx-border-color: " + theme.getTextColor() + "; " +
+                        "-fx-border-width: 3; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8;"
+        );
+
+        // 示例文字 - 修復版本
+        Label sampleText = new Label("Aa 文字");
+        sampleText.setStyle(
+                "-fx-text-fill: " + theme.getTextColor() + " !important; " +
+                        "-fx-font-size: 14px; " +
+                        "-fx-font-weight: bold;"
+        );
+        colorPreview.getChildren().add(sampleText);
+
+        // 主題選項 - 修復版本
+        RadioButton themeRadio = new RadioButton(theme.getDisplayName());
+        themeRadio.setToggleGroup(group);
+        themeRadio.setStyle(
+                "-fx-text-fill: white !important; " +
+                        "-fx-font-size: 15px; " +
+                        "-fx-font-weight: 700;"
+        );
+
+        // 主題描述 - 修復版本
+        String description = getThemeDescription(theme);
+        Label descLabel = new Label(description);
+        descLabel.setStyle(
+                "-fx-text-fill: rgba(255,255,255,0.85) !important; " +
+                        "-fx-font-size: 12px; " +
+                        "-fx-wrap-text: true; " +
+                        "-fx-max-width: 200;"
+        );
+
+        VBox textInfo = new VBox(8);
+        textInfo.getChildren().addAll(themeRadio, descLabel);
+
+        // 即時預覽功能
+        themeRadio.setOnAction(e -> {
+            if (themeRadio.isSelected()) {
+                // 臨時預覽主題效果
+                controller.getSettingsManager().setThemeMode(theme);
+                controller.applySettings();
+            }
+        });
+
+        option.getChildren().addAll(colorPreview, textInfo);
+        return option;
     }
 
     /**
