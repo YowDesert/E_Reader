@@ -45,8 +45,10 @@ public class MainController {
     private final ImageLoader imageLoader;
     private final PdfLoader pdfLoader;
     private final EpubLoader epubLoader;
+    private final TextLoader textLoader;
     private final TextExtractor textExtractor;
     private final BookmarkManager bookmarkManager;
+    private final NoteManager noteManager;
     private final SettingsManager settingsManager;
     private final FileManagerController fileManagerController;
 
@@ -84,13 +86,15 @@ public class MainController {
         this.primaryStage = primaryStage;
 
         // 初始化核心組件
+        this.settingsManager = new SettingsManager();
         this.imageViewer = new ImageViewer();
         this.textRenderer = new TextRenderer();
         this.imageLoader = new ImageLoader();
         this.pdfLoader = new PdfLoader();
         this.epubLoader = new EpubLoader();
+        this.textLoader = new TextLoader(settingsManager);
         this.bookmarkManager = new BookmarkManager();
-        this.settingsManager = new SettingsManager();
+        this.noteManager = new NoteManager(settingsManager);
         this.textExtractor = new TextExtractor(settingsManager);
         this.fileManagerController = FileManagerController.getInstance();
 
@@ -662,10 +666,14 @@ public class MainController {
         mainLayout.setOnKeyPressed(e -> {
             switch (e.getCode()) {
                 case LEFT:
+                    goToPreviousPage();
+                    break;
                 case PAGE_UP:
                     goToPreviousPage();
                     break;
                 case RIGHT:
+                    goToNextPage();
+                    break;
                 case PAGE_DOWN:
                 case SPACE:
                     goToNextPage();
@@ -858,6 +866,8 @@ public class MainController {
     public PdfLoader getPdfLoader() { return pdfLoader; }
     public EpubLoader getEpubLoader() { return epubLoader; }
     public TextExtractor getTextExtractor() { return textExtractor; }
+    public TextLoader getTextLoader() { return textLoader; }
+    public NoteManager getNoteManager() { return noteManager; }
 
     // 書籤管理
     public void showBookmarkDialog() {
@@ -1115,18 +1125,19 @@ public class MainController {
         notificationBox.setMaxWidth(350);
         notificationBox.setMinWidth(300);
 
-        // 現代化毛玻璃背景效果
+        // 現代化毛玻璃背景效果 - 與檔案閱讀顏色樣式一致
         notificationBox.setStyle(
                 "-fx-background-color: linear-gradient(135deg, " +
-                        "rgba(30,30,30,0.95) 0%, " +
-                        "rgba(40,40,40,0.98) 50%, " +
-                        "rgba(25,25,25,0.95) 100%); " +
+                        "rgba(16,16,16,0.98) 0%, " +
+                        "rgba(28,28,28,0.95) 30%, " +
+                        "rgba(20,20,20,0.98) 70%, " +
+                        "rgba(12,12,12,0.99) 100%); " +
                         "-fx-border-color: linear-gradient(135deg, " +
                         "rgba(52,152,219,0.6), rgba(155,89,182,0.6)); " +
                         "-fx-border-width: 1; " +
                         "-fx-border-radius: 16; " +
                         "-fx-background-radius: 16; " +
-                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 25, 0, 0, 8);"
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 25, 0, 0, 8);"
         );
 
         // 頂部指示條

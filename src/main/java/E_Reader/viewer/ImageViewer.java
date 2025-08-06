@@ -235,6 +235,10 @@ public class ImageViewer {
         return currentIndex;
     }
 
+    public int getCurrentPageIndex() {
+        return currentIndex;
+    }
+
     public int getTotalPages() {
         return images != null ? images.size() : 0;
     }

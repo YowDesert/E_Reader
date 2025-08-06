@@ -1,0 +1,455 @@
+/* 現代化 UI 樣式 - iOS 風格 + 玻璃風效果 */
+
+/* 全局樣式 */
+.root {
+    -fx-font-family: 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', sans-serif;
+    -fx-background-color: linear-gradient(135deg, 
+        rgba(16,16,16,0.98) 0%, 
+        rgba(28,28,28,0.95) 30%, 
+        rgba(20,20,20,0.98) 70%, 
+        rgba(12,12,12,0.99) 100%);
+}
+
+/* 毛玻璃效果容器 */
+.glass-container {
+    -fx-background-color: linear-gradient(135deg, 
+        rgba(255,255,255,0.1) 0%, 
+        rgba(255,255,255,0.05) 50%, 
+        rgba(255,255,255,0.1) 100%);
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(255,255,255,0.2);
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10);
+}
+
+/* 現代化按鈕樣式 */
+.modern-button {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(255,255,255,0.2) 0%, 
+        rgba(255,255,255,0.1) 50%, 
+        rgba(255,255,255,0.05) 100%);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: rgba(255,255,255,0.95);
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 2);
+}
+
+.modern-button:hover {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(255,255,255,0.3) 0%, 
+        rgba(255,255,255,0.2) 50%, 
+        rgba(255,255,255,0.1) 100%);
+    -fx-border-color: rgba(255,255,255,0.5);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 6, 0, 0, 3);
+}
+
+.modern-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(255,255,255,0.1) 0%, 
+        rgba(255,255,255,0.05) 50%, 
+        rgba(255,255,255,0.02) 100%);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0, 0, 4);
+}
+
+/* 主要按鈕樣式 */
+.primary-button {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(52,152,219,0.9) 0%, 
+        rgba(41,128,185,0.9) 100%);
+    -fx-border-color: rgba(52,152,219,0.8);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(52,152,219,0.4), 6, 0, 0, 2);
+}
+
+.primary-button:hover {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(52,152,219,1.0) 0%, 
+        rgba(41,128,185,1.0) 100%);
+    -fx-effect: dropshadow(gaussian, rgba(52,152,219,0.6), 8, 0, 0, 3);
+}
+
+/* 成功按鈕樣式 */
+.success-button {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(46,204,113,0.9) 0%, 
+        rgba(39,174,96,0.9) 100%);
+    -fx-border-color: rgba(46,204,113,0.8);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(46,204,113,0.4), 6, 0, 0, 2);
+}
+
+/* 危險按鈕樣式 */
+.danger-button {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(231,76,60,0.9) 0%, 
+        rgba(192,57,43,0.9) 100%);
+    -fx-border-color: rgba(231,76,60,0.8);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(231,76,60,0.4), 6, 0, 0, 2);
+}
+
+/* 專注模式按鈕樣式 */
+.focus-button {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(155,89,182,0.9) 0%, 
+        rgba(142,68,173,0.9) 100%);
+    -fx-border-color: rgba(155,89,182,0.8);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(155,89,182,0.4), 6, 0, 0, 2);
+}
+
+/* 現代化文字輸入框 */
+.modern-text-field {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: rgba(255,255,255,0.6);
+    -fx-font-size: 14px;
+    -fx-padding: 10 12 10 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.modern-text-field:focused {
+    -fx-border-color: rgba(52,152,219,0.8);
+    -fx-border-width: 2;
+    -fx-effect: dropshadow(gaussian, rgba(52,152,219,0.3), 4, 0, 0, 2);
+}
+
+/* 現代化文字區域 */
+.modern-text-area {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: rgba(255,255,255,0.6);
+    -fx-font-size: 14px;
+    -fx-padding: 10 12 10 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.modern-text-area .content {
+    -fx-background-color: transparent;
+}
+
+/* 現代化下拉選單 */
+.modern-combo-box {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-padding: 8 12 8 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.modern-combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+}
+
+.modern-combo-box .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.modern-combo-box .arrow {
+    -fx-background-color: rgba(255,255,255,0.8);
+}
+
+/* 現代化滑桿 */
+.modern-slider {
+    -fx-show-tick-labels: true;
+    -fx-show-tick-marks: true;
+    -fx-major-tick-unit: 20;
+    -fx-minor-tick-count: 1;
+}
+
+.modern-slider .track {
+    -fx-background-color: rgba(255,255,255,0.2);
+    -fx-background-radius: 4;
+    -fx-pref-height: 8;
+}
+
+.modern-slider .thumb {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(52,152,219,0.9) 0%, 
+        rgba(41,128,185,0.9) 100%);
+    -fx-background-radius: 8;
+    -fx-pref-width: 16;
+    -fx-pref-height: 16;
+    -fx-effect: dropshadow(gaussian, rgba(52,152,219,0.4), 4, 0, 0, 2);
+}
+
+/* 現代化標籤頁 */
+.modern-tab-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+}
+
+.modern-tab-pane .tab-header-area {
+    -fx-background-color: transparent;
+}
+
+.modern-tab-pane .tab-header-background {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-background-radius: 8;
+}
+
+.modern-tab-pane .tab {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-background-radius: 8 8 0 0;
+    -fx-border-color: rgba(255,255,255,0.2);
+    -fx-border-width: 1 1 0 1;
+    -fx-border-radius: 8 8 0 0;
+    -fx-padding: 8 16 8 16;
+}
+
+.modern-tab-pane .tab:selected {
+    -fx-background-color: rgba(255,255,255,0.2);
+    -fx-border-color: rgba(52,152,219,0.8);
+}
+
+.modern-tab-pane .tab-label {
+    -fx-text-fill: white;
+    -fx-font-weight: 600;
+}
+
+/* 現代化列表視圖 */
+.modern-list-view {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+
+.modern-list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-padding: 8 12 8 12;
+}
+
+.modern-list-view .list-cell:selected {
+    -fx-background-color: rgba(52,152,219,0.3);
+    -fx-text-fill: white;
+}
+
+.modern-list-view .list-cell:hover {
+    -fx-background-color: rgba(255,255,255,0.1);
+}
+
+/* 現代化對話框 */
+.modern-dialog {
+    -fx-background-color: linear-gradient(135deg, 
+        rgba(255,255,255,0.95) 0%, 
+        rgba(248,248,248,0.98) 50%, 
+        rgba(255,255,255,0.95) 100%);
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(200,200,200,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 20, 0, 0, 10);
+}
+
+/* 現代化通知樣式 */
+.modern-notification {
+    -fx-background-color: linear-gradient(135deg, 
+        rgba(16,16,16,0.98) 0%, 
+        rgba(28,28,28,0.95) 30%, 
+        rgba(20,20,20,0.98) 70%, 
+        rgba(12,12,12,0.99) 100%);
+    -fx-background-radius: 16;
+    -fx-border-color: linear-gradient(135deg, 
+        rgba(52,152,219,0.6), rgba(155,89,182,0.6));
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 25, 0, 0, 8);
+}
+
+/* 現代化進度條 */
+.modern-progress-bar {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-background-radius: 4;
+    -fx-border-color: rgba(255,255,255,0.2);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+}
+
+.modern-progress-bar .bar {
+    -fx-background-color: linear-gradient(to right, 
+        rgba(52,152,219,0.8), rgba(155,89,182,0.8));
+    -fx-background-radius: 4;
+}
+
+/* 現代化分隔線 */
+.modern-separator {
+    -fx-background-color: rgba(255,255,255,0.2);
+    -fx-border-color: rgba(255,255,255,0.2);
+}
+
+/* 現代化標籤 */
+.modern-label {
+    -fx-text-fill: white;
+    -fx-font-weight: 500;
+}
+
+.modern-label.title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.modern-label.subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: rgba(255,255,255,0.8);
+}
+
+/* 現代化核取方塊 */
+.modern-check-box {
+    -fx-text-fill: white;
+    -fx-font-weight: 500;
+}
+
+.modern-check-box .box {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.modern-check-box:selected .mark {
+    -fx-background-color: rgba(52,152,219,0.9);
+}
+
+/* 現代化單選按鈕 */
+.modern-radio-button {
+    -fx-text-fill: white;
+    -fx-font-weight: 500;
+}
+
+.modern-radio-button .radio {
+    -fx-background-color: rgba(255,255,255,0.1);
+    -fx-border-color: rgba(255,255,255,0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.modern-radio-button:selected .radio {
+    -fx-border-color: rgba(52,152,219,0.8);
+}
+
+.modern-radio-button:selected .dot {
+    -fx-background-color: rgba(52,152,219,0.9);
+}
+
+/* 動畫效果 */
+.fade-in {
+    -fx-opacity: 0;
+    -fx-animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+    from { -fx-opacity: 0; }
+    to { -fx-opacity: 1; }
+}
+
+.slide-in {
+    -fx-translate-x: -50;
+    -fx-animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+    from { -fx-translate-x: -50; }
+    to { -fx-translate-x: 0; }
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .modern-button {
+        -fx-font-size: 10px;
+        -fx-padding: 6 12 6 12;
+    }
+    
+    .modern-text-field {
+        -fx-font-size: 12px;
+        -fx-padding: 8 10 8 10;
+    }
+}
+
+/* 深色主題變體 */
+.dark-theme {
+    -fx-background-color: linear-gradient(135deg, 
+        rgba(12,12,12,0.99) 0%, 
+        rgba(20,20,20,0.98) 30%, 
+        rgba(16,16,16,0.98) 70%, 
+        rgba(8,8,8,0.99) 100%);
+}
+
+/* 淺色主題變體 */
+.light-theme {
+    -fx-background-color: linear-gradient(135deg, 
+        rgba(255,255,255,0.98) 0%, 
+        rgba(248,248,248,0.95) 30%, 
+        rgba(255,255,255,0.98) 70%, 
+        rgba(252,252,252,0.99) 100%);
+}
+
+.light-theme .modern-button {
+    -fx-background-color: linear-gradient(to bottom, 
+        rgba(0,0,0,0.1) 0%, 
+        rgba(0,0,0,0.05) 50%, 
+        rgba(0,0,0,0.02) 100%);
+    -fx-border-color: rgba(0,0,0,0.2);
+    -fx-text-fill: rgba(0,0,0,0.9);
+}
+
+.light-theme .modern-text-field {
+    -fx-background-color: rgba(0,0,0,0.05);
+    -fx-border-color: rgba(0,0,0,0.2);
+    -fx-text-fill: rgba(0,0,0,0.9);
+    -fx-prompt-text-fill: rgba(0,0,0,0.5);
+} 

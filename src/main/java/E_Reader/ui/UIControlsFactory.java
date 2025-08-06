@@ -151,6 +151,10 @@ public class UIControlsFactory {
         // 文字模式专用按钮
         searchBtn = createButton("🔍 搜索", () -> showSearchDialog(controller));
 
+        // 筆記和重點功能按鈕
+        Button noteBtn = createButton("📝 筆記", () -> showNoteDialog(controller));
+        Button highlightBtn = createButton("🖍️ 重點", () -> showHighlightDialog(controller));
+
         // 专注模式按钮
         focusModeBtn = createStyledButton("🎯 專注", () -> {
             System.out.println("專注按鈕被點擊");
@@ -180,6 +184,8 @@ public class UIControlsFactory {
                 returnToManagerBtn, toggleNavBarBtn,
                 createSeparator(),
                 bookmarkBtn, textModeBtn,
+                createSeparator(),
+                noteBtn, highlightBtn,
                 createSeparator(),
                 autoScrollBtn, nightModeBtn, eyeCareBtn, focusModeBtn,
                 createSeparator(),
@@ -511,6 +517,46 @@ public class UIControlsFactory {
             }
         });
     }
+    
+    private void showNoteDialog(MainController controller) {
+        // 顯示筆記對話框
+        if (controller.getStateManager().isFileLoaded()) {
+            String bookPath = controller.getStateManager().getCurrentFilePath();
+            String bookName = new java.io.File(bookPath).getName();
+            int currentPage = controller.getStateManager().getCurrentPageIndex();
+            
+            NoteDialog noteDialog = new NoteDialog(
+                controller.getPrimaryStage(),
+                controller.getNoteManager(),
+                bookPath,
+                bookName,
+                currentPage
+            );
+            noteDialog.show();
+        } else {
+            controller.showNotification("提示", "請先開啟一個檔案");
+        }
+    }
+    
+    private void showHighlightDialog(MainController controller) {
+        // 顯示重點對話框（與筆記對話框相同，但預設選中重點標籤頁）
+        if (controller.getStateManager().isFileLoaded()) {
+            String bookPath = controller.getStateManager().getCurrentFilePath();
+            String bookName = new java.io.File(bookPath).getName();
+            int currentPage = controller.getStateManager().getCurrentPageIndex();
+            
+            NoteDialog noteDialog = new NoteDialog(
+                controller.getPrimaryStage(),
+                controller.getNoteManager(),
+                bookPath,
+                bookName,
+                currentPage
+            );
+            noteDialog.show();
+        } else {
+            controller.showNotification("提示", "請先開啟一個檔案");
+        }
+    }
 
     /**
      * 显示增强版设置对话框 - 修复版本
@@ -687,14 +733,14 @@ public class UIControlsFactory {
                         "-fx-background-radius: 6;"
         );
 
-        // 实现真正的亮度调节功能
+        // 实现亮度预览功能（不立即应用）
         brightnessSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             double brightness = newVal.doubleValue();
             currentBrightness = brightness;
             brightnessLabel.setText(String.format("%.0f%%", brightness));
 
-            // 应用亮度到应用程序
-            applyBrightnessToApp(controller, brightness);
+            // 只预览亮度效果，不立即应用
+            previewBrightness(controller, brightness);
         });
 
         HBox brightnessControl = new HBox(15);
@@ -704,11 +750,41 @@ public class UIControlsFactory {
 
         brightnessSection.getChildren().add(brightnessControl);
 
+        // 添加应用按钮
+        Button applyButton = new Button("✅ 應用設定");
+        applyButton.setStyle(
+            "-fx-background-color: linear-gradient(to bottom, " +
+                "rgba(46,204,113,0.9) 0%, " +
+                "rgba(39,174,96,0.9) 100%); " +
+                "-fx-border-color: rgba(46,204,113,0.8); " +
+                "-fx-border-width: 1; " +
+                "-fx-border-radius: 8; " +
+                "-fx-background-radius: 8; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-size: 14px; " +
+                "-fx-font-weight: 700; " +
+                "-fx-padding: 10 20 10 20; " +
+                "-fx-cursor: hand; " +
+                "-fx-effect: dropshadow(gaussian, rgba(46,204,113,0.4), 6, 0, 0, 2);"
+        );
+        
+        applyButton.setOnAction(e -> {
+            // 应用所有设置
+            applyBrightnessToApp(controller, currentBrightness);
+            controller.getSettingsManager().saveSettings();
+            controller.applySettings();
+            controller.showNotification("設定已應用", "所有設定已成功應用並保存");
+        });
+
+        VBox applySection = new VBox(10);
+        applySection.setAlignment(Pos.CENTER);
+        applySection.getChildren().add(applyButton);
+
         // 分隔线 - 修复版本
         Separator separator = new Separator();
         separator.setStyle("-fx-background-color: rgba(255,255,255,0.25); -fx-border-color: rgba(255,255,255,0.25);");
 
-        content.getChildren().addAll(themeSection, separator, brightnessSection);
+        content.getChildren().addAll(themeSection, separator, brightnessSection, separator, applySection);
 
         ScrollPane scrollPane = new ScrollPane(content);
         scrollPane.setFitToWidth(true);
@@ -723,15 +799,34 @@ public class UIControlsFactory {
     }
 
     /**
-     * 应用亮度到应用程序 - 新增功能
+     * 预览亮度效果（不保存设置）
+     */
+    private void previewBrightness(MainController controller, double brightness) {
+        // 修复亮度逻辑：亮度值越高，显示越亮
+        double normalizedBrightness = brightness / 100.0;
+        
+        // 只预览效果，不保存设置
+        if (controller.getPrimaryStage() != null && controller.getPrimaryStage().getScene() != null) {
+            String brightnessFilter = String.format("brightness(%.2f)", normalizedBrightness);
+            controller.getPrimaryStage().getScene().getRoot().setStyle(
+                "-fx-effect: " + brightnessFilter + ";"
+            );
+        }
+    }
+
+    /**
+     * 应用亮度到应用程序 - 修复版本
      */
     private void applyBrightnessToApp(MainController controller, double brightness) {
-        // 将亮度值转换为不透明度 (10-100% -> 0.1-1.0)
-        double opacity = brightness / 100.0;
-
-        // 应用到主窗口
+        // 修复亮度逻辑：亮度值越高，显示越亮
+        double normalizedBrightness = brightness / 100.0;
+        
+        // 应用到主窗口的亮度效果（使用CSS滤镜）
         if (controller.getPrimaryStage() != null && controller.getPrimaryStage().getScene() != null) {
-            controller.getPrimaryStage().getScene().getRoot().setOpacity(opacity);
+            String brightnessFilter = String.format("brightness(%.2f)", normalizedBrightness);
+            controller.getPrimaryStage().getScene().getRoot().setStyle(
+                "-fx-effect: " + brightnessFilter + ";"
+            );
         }
 
         // 保存亮度设置到SettingsManager
