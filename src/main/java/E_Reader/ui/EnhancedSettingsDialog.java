@@ -24,6 +24,9 @@ public class EnhancedSettingsDialog {
     private final Stage parentStage;
     private Stage dialogStage;
 
+    // 添加主界面更新回調接口
+    private Runnable uiUpdateCallback;
+
     // UI 組件
     private ToggleGroup themeGroup;
     private ToggleGroup ocrGroup;
@@ -38,16 +41,19 @@ public class EnhancedSettingsDialog {
     private Label ocrDetailLabel;
     private ProgressBar brightnessPreview;
 
-    // 臨時設定（用於預覽）
-    private SettingsManager.ThemeMode tempThemeMode;
-    private int tempBrightness;
+    // 臨時設定（用於預覽）- 移除臨時變數，直接使用settingsManager
+    // private SettingsManager.ThemeMode tempThemeMode;
+    // private int tempBrightness;
 
     public EnhancedSettingsDialog(SettingsManager settingsManager, Stage parentStage) {
         this.settingsManager = settingsManager;
         this.parentStage = parentStage;
-        this.tempThemeMode = settingsManager.getCurrentTheme();
-        this.tempBrightness = settingsManager.getEyeCareBrightness();
         createDialog();
+    }
+
+    // 添加設定UI更新回調的方法
+    public void setUIUpdateCallback(Runnable callback) {
+        this.uiUpdateCallback = callback;
     }
 
     private void createDialog() {
@@ -60,8 +66,8 @@ public class EnhancedSettingsDialog {
         VBox mainContent = createMainContent();
 
         // 創建場景
-        Scene scene = new Scene(mainContent, 700, 750); // 加寬以容納預覽
-        scene.setFill(null); // 透明背景
+        Scene scene = new Scene(mainContent, 700, 750);
+        scene.setFill(null);
 
         dialogStage.setScene(scene);
         dialogStage.centerOnScreen();
@@ -183,10 +189,14 @@ public class EnhancedSettingsDialog {
             RadioButton themeRadio = createThemeOption(theme);
             themeRadio.setToggleGroup(themeGroup);
 
-            // 添加即時預覽功能
+            // 修改：直接應用設定並更新預覽，不使用臨時變數
             themeRadio.setOnAction(e -> {
-                tempThemeMode = theme;
+                settingsManager.setThemeMode(theme);
                 updateThemePreview();
+                // 即時更新UI
+                if (uiUpdateCallback != null) {
+                    uiUpdateCallback.run();
+                }
             });
 
             themeOptions.getChildren().add(themeRadio);
@@ -199,7 +209,7 @@ public class EnhancedSettingsDialog {
         themeSection.getChildren().add(themeOptions);
 
         // 亮度設定
-        VBox brightnessSection = createSection("🔆 顯示亮度", "調整閱讀舒適度");
+        VBox brightnessSection = createSection("🔆 顯示亮度", "調整閱讀舒適度（實時生效）");
 
         brightnessSlider = new Slider(10, 100, settingsManager.getEyeCareBrightness());
         brightnessSlider.setShowTickLabels(true);
@@ -220,10 +230,19 @@ public class EnhancedSettingsDialog {
                         "-fx-background-radius: 6;"
         );
 
+        // 修改：亮度變更時即時應用
         brightnessSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            tempBrightness = newVal.intValue();
+            int brightness = newVal.intValue();
             brightnessLabel.setText(String.format("%.0f%%", newVal.doubleValue()));
+
+            // 即時應用亮度設定
+            settingsManager.setEyeCareBrightness(brightness);
             updateBrightnessPreview();
+
+            // 即時更新UI亮度
+            if (uiUpdateCallback != null) {
+                uiUpdateCallback.run();
+            }
         });
 
         HBox brightnessControl = new HBox(15);
@@ -292,12 +311,13 @@ public class EnhancedSettingsDialog {
         return previewArea;
     }
 
-    // 更新主題預覽
+    // 更新主題預覽 - 修改為使用當前設定而非臨時變數
     private void updateThemePreview() {
         themePreviewBox.getChildren().clear();
 
-        String bgColor = tempThemeMode.getBackgroundColor();
-        String textColor = tempThemeMode.getTextColor();
+        SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+        String bgColor = currentTheme.getBackgroundColor();
+        String textColor = currentTheme.getTextColor();
 
         themePreviewBox.setStyle(
                 "-fx-background-color: " + bgColor + "; " +
@@ -307,7 +327,7 @@ public class EnhancedSettingsDialog {
                         "-fx-background-radius: 8;"
         );
 
-        Label themeNameLabel = new Label(tempThemeMode.getDisplayName());
+        Label themeNameLabel = new Label(currentTheme.getDisplayName());
         themeNameLabel.setStyle(
                 "-fx-text-fill: " + textColor + "; " +
                         "-fx-font-size: 18px; " +
@@ -344,23 +364,24 @@ public class EnhancedSettingsDialog {
         fadeIn.play();
     }
 
-    // 更新亮度預覽
+    // 更新亮度預覽 - 修改為使用當前設定
     private void updateBrightnessPreview() {
-        double progress = tempBrightness / 100.0;
+        int currentBrightness = settingsManager.getEyeCareBrightness();
+        double progress = currentBrightness / 100.0;
         brightnessPreview.setProgress(progress);
 
         // 根據亮度調整顏色
-        String brightnesColor;
-        if (tempBrightness < 30) {
-            brightnesColor = "#e74c3c"; // 低亮度 - 紅色
-        } else if (tempBrightness < 70) {
-            brightnesColor = "#f39c12"; // 中亮度 - 橙色
+        String brightnessColor;
+        if (currentBrightness < 30) {
+            brightnessColor = "#e74c3c"; // 低亮度 - 紅色
+        } else if (currentBrightness < 70) {
+            brightnessColor = "#f39c12"; // 中亮度 - 橙色
         } else {
-            brightnesColor = "#27ae60"; // 高亮度 - 綠色
+            brightnessColor = "#27ae60"; // 高亮度 - 綠色
         }
 
         brightnessPreview.setStyle(
-                "-fx-accent: " + brightnesColor + "; " +
+                "-fx-accent: " + brightnessColor + "; " +
                         "-fx-background-color: rgba(255,255,255,0.1); " +
                         "-fx-background-radius: 4; " +
                         "-fx-background-insets: 0;"
@@ -405,14 +426,19 @@ public class EnhancedSettingsDialog {
             RadioButton modelRadio = createOcrOption(model);
             modelRadio.setToggleGroup(ocrGroup);
 
-            // 添加詳細說明更新
-            modelRadio.setOnAction(e -> updateOcrDetails(model));
+            // 修改：直接應用OCR設定
+            modelRadio.setOnAction(e -> {
+                settingsManager.setOcrModel(model);
+                updateOcrDetails(model);
+                // 保存OCR設定
+                settingsManager.saveSettings();
+            });
 
             modelOptions.getChildren().add(modelRadio);
 
             if (model == settingsManager.getOcrModel()) {
                 modelRadio.setSelected(true);
-                updateOcrDetails(model); // 初始化詳細說明
+                updateOcrDetails(model);
             }
         }
 
@@ -525,6 +551,12 @@ public class EnhancedSettingsDialog {
         rememberFileCheckBox.setSelected(settingsManager.isRememberLastFile());
         rememberFileCheckBox.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
 
+        // 修改：即時應用設定變更
+        rememberFileCheckBox.setOnAction(e -> {
+            settingsManager.setRememberLastFile(rememberFileCheckBox.isSelected());
+            settingsManager.saveSettings();
+        });
+
         Label fileHelpLabel = new Label("💡 啟用後會在下次開啟應用程式時自動載入上次閱讀的檔案和頁碼");
         fileHelpLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 11px; -fx-wrap-text: true;");
         fileHelpLabel.setWrapText(true);
@@ -532,11 +564,21 @@ public class EnhancedSettingsDialog {
         fileSection.getChildren().addAll(rememberFileCheckBox, fileHelpLabel);
 
         // 介面顯示
-        VBox interfaceSection = createSection("🖥️ 介面顯示", "自訂使用者介面");
+        VBox interfaceSection = createSection("🖥️ 介面顯示", "自訂使用者介面（即時生效）");
 
         showPageNumbersCheckBox = new CheckBox("顯示頁碼資訊");
         showPageNumbersCheckBox.setSelected(settingsManager.isShowPageNumbers());
         showPageNumbersCheckBox.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
+
+        // 修改：即時應用頁碼顯示設定
+        showPageNumbersCheckBox.setOnAction(e -> {
+            settingsManager.setShowPageNumbers(showPageNumbersCheckBox.isSelected());
+            settingsManager.saveSettings();
+            // 即時更新UI
+            if (uiUpdateCallback != null) {
+                uiUpdateCallback.run();
+            }
+        });
 
         Label interfaceHelpLabel = new Label("📄 控制右下角頁碼顯示，關閉可獲得更清爽的閱讀體驗");
         interfaceHelpLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 11px; -fx-wrap-text: true;");
@@ -550,6 +592,16 @@ public class EnhancedSettingsDialog {
         enableTouchNavCheckBox = new CheckBox("觸控導覽");
         enableTouchNavCheckBox.setSelected(settingsManager.isEnableTouchNavigation());
         enableTouchNavCheckBox.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
+
+        // 修改：即時應用觸控設定
+        enableTouchNavCheckBox.setOnAction(e -> {
+            settingsManager.setEnableTouchNavigation(enableTouchNavCheckBox.isSelected());
+            settingsManager.saveSettings();
+            // 即時更新UI
+            if (uiUpdateCallback != null) {
+                uiUpdateCallback.run();
+            }
+        });
 
         Label touchHelpLabel = new Label("👆 啟用觸控螢幕支援，可用手勢進行頁面導覽");
         touchHelpLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 11px; -fx-wrap-text: true;");
@@ -579,8 +631,12 @@ public class EnhancedSettingsDialog {
                         "-fx-background-radius: 6;"
         );
 
+        // 修改：即時應用自動保存間隔設定
         autoSaveIntervalSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            int interval = newVal.intValue();
             intervalLabel.setText(String.format("%.0f 秒", newVal.doubleValue()));
+            settingsManager.setAutoSaveInterval(interval);
+            settingsManager.saveSettings();
         });
 
         HBox intervalControl = new HBox(15);
@@ -679,24 +735,10 @@ public class EnhancedSettingsDialog {
         );
         cancelButton.setOnAction(e -> close());
 
-        Button previewButton = new Button("🔍 預覽變更");
-        previewButton.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, " +
-                        "rgba(230,126,34,0.9), rgba(211,84,0,0.9)); " +
-                        "-fx-border-color: rgba(230,126,34,0.8); " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 8; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-font-weight: 600; " +
-                        "-fx-padding: 10 20; " +
-                        "-fx-cursor: hand; " +
-                        "-fx-effect: dropshadow(gaussian, rgba(230,126,34,0.5), 8, 0, 0, 3);"
-        );
-        previewButton.setOnAction(e -> previewSettings());
+        // 移除預覽按鈕，因為現在是即時預覽
+        // Button previewButton = new Button("🔍 預覽變更");
 
-        Button okButton = new Button("確定");
+        Button okButton = new Button("✅ 完成設定");
         okButton.setStyle(
                 "-fx-background-color: linear-gradient(to bottom, " +
                         "rgba(52,152,219,0.9), rgba(41,128,185,0.9)); " +
@@ -712,35 +754,26 @@ public class EnhancedSettingsDialog {
                         "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.5), 8, 0, 0, 3);"
         );
         okButton.setOnAction(e -> {
-            saveSettings();
+            // 最終保存所有設定
+            saveAllSettings();
             close();
         });
 
-        buttonBar.getChildren().addAll(cancelButton, previewButton, okButton);
+        buttonBar.getChildren().addAll(cancelButton, okButton);
         return buttonBar;
     }
 
-    // 預覽設定變更
-    private void previewSettings() {
-        // 臨時應用設定到主界面
-        SettingsManager.ThemeMode originalTheme = settingsManager.getCurrentTheme();
-        int originalBrightness = settingsManager.getEyeCareBrightness();
+    // 移除原本的預覽功能，改為即時應用
+    // private void previewSettings() { ... }
 
-        // 應用臨時設定
-        settingsManager.setThemeMode(tempThemeMode);
-        settingsManager.setEyeCareBrightness(tempBrightness);
-
-        showNotification("預覽模式", "設定已臨時套用，點擊「確定」保存或「取消」恢復");
-
-        // 3秒後自動恢復
-        Timeline revertTimer = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
-            settingsManager.setThemeMode(originalTheme);
-            settingsManager.setEyeCareBrightness(originalBrightness);
-            showNotification("預覽結束", "已恢復原始設定");
-        }));
-        revertTimer.play();
+    // 修改：最終保存所有設定
+    private void saveAllSettings() {
+        // 確保所有設定都已保存
+        settingsManager.saveSettings();
+        showNotification("設定已保存", "所有變更已成功套用並保存");
     }
 
+    // 保持原有的保存方法作為備用
     private void saveSettings() {
         // 保存主題設定
         if (themeGroup.getSelectedToggle() != null) {
