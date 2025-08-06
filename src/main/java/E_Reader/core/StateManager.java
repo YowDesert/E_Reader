@@ -202,7 +202,7 @@ public class StateManager {
     public void setCurrentTextPageIndex(int currentTextPageIndex) {
         this.currentTextPageIndex = currentTextPageIndex;
     }
-    
+
     /**
      * 獲取當前模式下的頁面索引
      */
@@ -219,5 +219,9 @@ public class StateManager {
         } else {
             currentImagePageIndex = pageIndex;
         }
+    }
+
+    public boolean isFileLoaded() {
+        return !currentFilePath.isEmpty() && hasLoadedContent();
     }
 }

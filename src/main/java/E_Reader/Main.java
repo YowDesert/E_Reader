@@ -117,6 +117,22 @@ public class Main extends Application {
             } catch (Exception ex) {
                 showError("無法載入 EPUB 檔案", ex.getMessage());
             }
+        } else if (fileName.endsWith(".txt")) {
+            // 開啟TXT檔案
+            try {
+                var images = mainController.getTextLoader().loadImagesFromText(file);
+                if (!images.isEmpty()) {
+                    mainController.getStateManager().setFileLoaded(file.getAbsolutePath(), false, false, images, null);
+                    mainController.getImageViewer().setImages(images);
+                    mainController.getPrimaryStage().setTitle("E_Reader - " + file.getName());
+
+                    showSuccess("檔案開啟", "成功開啟 TXT檔案: " + file.getName());
+                } else {
+                    showError("載入失敗", "TXT檔案中沒有可讀取的內容");
+                }
+            } catch (Exception ex) {
+                showError("無法載入 TXT 檔案", ex.getMessage());
+            }
         } else if (isImageFile(fileName)) {
             // 開啟圖片檔案 - 改善的處理方式
             openImageFile(file);
