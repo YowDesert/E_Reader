@@ -1778,10 +1778,139 @@ public class MainController {
     public void showSettingsDialog() {
         // 使用新的增強版設定對話框
         EnhancedSettingsDialog settingsDialog = new EnhancedSettingsDialog(settingsManager, primaryStage);
-        settingsDialog.show();
 
-        // 設定變更後重新套用設定
-        applySettings();
+        // 設定UI更新回調，當設定變更時即時更新主界面
+        settingsDialog.setUIUpdateCallback(() -> {
+            Platform.runLater(() -> {
+                // 即時套用所有設定變更
+                applyAllSettings();
+                // 更新UI顯示
+                updateUI();
+                // 更新頁碼顯示狀態
+                updatePageNumbersVisibility();
+                // 更新控制元素顯示
+                updateControlsVisibility();
+            });
+        });
+
+        settingsDialog.show();
+    }
+    private void applyAllSettings() {
+        // 1. 套用主題設定
+        SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+        String backgroundColor = currentTheme.getBackgroundColor();
+        String textColor = currentTheme.getTextColor();
+
+        // 更新背景色
+        if (imageViewer.getScrollPane() != null) {
+            String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
+            imageViewer.getScrollPane().setStyle(newStyle);
+        }
+
+        // 更新中央面板背景
+        updateCenterPaneBackground(currentTheme);
+
+        // 如果在文字模式，也更新文字渲染器的主題
+        if (stateManager.isTextMode()) {
+            textRenderer.setThemeColors(currentTheme);
+        }
+
+        // 2. 套用亮度設定
+        applyBrightnessSettings();
+
+        // 3. 套用其他設定
+        imageViewer.setFitMode(settingsManager.getFitMode());
+
+        // 4. 更新護眼提醒
+        updateEyeCareReminder();
+    }
+
+    /**
+     * 更新中央面板背景
+     */
+    private void updateCenterPaneBackground(SettingsManager.ThemeMode theme) {
+        // 根據主題調整背景漸變
+        String bgGradient = switch (theme) {
+            case LIGHT -> "-fx-background-color: linear-gradient(to bottom, rgba(248,248,248,0.98) 0%, rgba(255,255,255,0.95) 100%);";
+            case DARK -> "-fx-background-color: linear-gradient(to bottom, rgba(18,18,18,0.98) 0%, rgba(25,25,25,0.95) 100%);";
+            case BLACK -> "-fx-background-color: linear-gradient(to bottom, rgba(0,0,0,0.98) 0%, rgba(8,8,8,0.95) 100%);";
+            case EYE_CARE -> "-fx-background-color: linear-gradient(to bottom, rgba(26,26,15,0.98) 0%, rgba(32,32,20,0.95) 100%);";
+            case SEPIA -> "-fx-background-color: linear-gradient(to bottom, rgba(244,236,216,0.98) 0%, rgba(240,230,210,0.95) 100%);";
+            default -> "-fx-background-color: linear-gradient(to bottom, rgba(18,18,18,0.98) 0%, rgba(25,25,25,0.95) 100%);";
+        };
+
+        centerPane.setStyle(bgGradient);
+    }
+
+    /**
+     * 套用亮度設定
+     */
+    private void applyBrightnessSettings() {
+        int brightness = settingsManager.getEyeCareBrightness();
+        double opacity = brightness / 100.0;
+
+        // 套用到主要顯示區域
+        if (imageViewer.getImageView() != null) {
+            imageViewer.getImageView().setOpacity(opacity);
+        }
+
+        // 如果在文字模式，也套用到文字渲染器
+        if (stateManager.isTextMode() && textRenderer.getMainContainer() != null) {
+            textRenderer.getMainContainer().setOpacity(opacity);
+        }
+    }
+
+    /**
+     * 更新頁碼顯示狀態
+     */
+    private void updatePageNumbersVisibility() {
+        boolean showPageNumbers = settingsManager.isShowPageNumbers();
+
+        if (pageLabel != null) {
+            pageLabel.setVisible(showPageNumbers);
+            pageLabel.setManaged(showPageNumbers);
+
+            // 添加淡入淡出動畫
+            if (showPageNumbers && pageLabel.getOpacity() < 1.0) {
+                FadeTransition fadeIn = new FadeTransition(Duration.millis(300), pageLabel);
+                fadeIn.setFromValue(0.0);
+                fadeIn.setToValue(1.0);
+                fadeIn.play();
+            } else if (!showPageNumbers && pageLabel.getOpacity() > 0.0) {
+                FadeTransition fadeOut = new FadeTransition(Duration.millis(300), pageLabel);
+                fadeOut.setFromValue(1.0);
+                fadeOut.setToValue(0.0);
+                fadeOut.play();
+            }
+        }
+    }
+
+    /**
+     * 更新控制元素顯示
+     */
+    private void updateControlsVisibility() {
+        boolean enableTouchNav = settingsManager.isEnableTouchNavigation();
+
+        // 這裡可以根據觸控導覽設定來調整UI元素
+        // 例如：顯示或隱藏特定的觸控提示等
+
+        // 更新自動保存間隔
+        int autoSaveInterval = settingsManager.getAutoSaveInterval();
+        if (timerManager != null) {
+            timerManager.updateAutoSaveInterval(autoSaveInterval);
+        }
+    }
+
+    /**
+     * 更新護眼提醒
+     */
+    private void updateEyeCareReminder() {
+        if (settingsManager.isEyeCareMode() && !timerManager.isEyeCareReminderRunning()) {
+            timerManager.startEyeCareReminder(() ->
+                    showNotification("護眼提醒 👁️", "已閱讀30分鐘，建議休息片刻"));
+        } else if (!settingsManager.isEyeCareMode() && timerManager.isEyeCareReminderRunning()) {
+            timerManager.stopEyeCareReminder();
+        }
     }
 
 

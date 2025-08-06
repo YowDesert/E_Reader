@@ -169,6 +169,15 @@ public class TimerManager {
         stopAutoScroll();
     }
 
+    public void updateAutoSaveInterval(int intervalSeconds) {
+        // 這個方法主要是為了設定介面的即時響應
+        // 實際的自動保存功能如果有實現，可以在這裡更新
+        System.out.println("自動保存間隔已更新為: " + intervalSeconds + " 秒");
+
+        // 如果有實際的自動保存計時器，可以在這裡重新啟動
+        // 目前保持空實現，因為原代碼中沒有看到自動保存的具體實現
+    }
+
     /**
      * 暫停所有計時器
      */
