@@ -245,26 +245,51 @@ public class AlertHelper {
      * @param alert 對話框
      */
     private static void applyDarkTheme(Alert alert) {
-        // 套用深色主題樣式
+        // 套用深灰色主題樣式 - 更深的背景色，更亮的文字
         alert.getDialogPane().setStyle(
-            "-fx-background-color: #2b2b2b; " +
-            "-fx-text-fill: white;"
+            "-fx-background-color: rgba(32, 32, 32, 0.98); " +
+            "-fx-text-fill: rgba(240, 240, 240, 0.98); " +
+            "-fx-background-radius: 16px; " +
+            "-fx-border-color: rgba(100, 100, 100, 0.8); " +
+            "-fx-border-width: 1px; " +
+            "-fx-border-radius: 16px; " +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 30, 0, 0, 15);"
         );
         
-        // 套用按鈕樣式
+        // 套用按鈕樣式 - 更亮的按鈕和文字
         alert.getDialogPane().lookupAll(".button").forEach(node -> {
             node.setStyle(
-                "-fx-background-color: #404040; " +
-                "-fx-text-fill: white; " +
-                "-fx-border-color: #666666; " +
-                "-fx-border-radius: 3px; " +
-                "-fx-background-radius: 3px;"
+                "-fx-background-color: rgba(60, 60, 60, 0.98); " +
+                "-fx-text-fill: rgba(240, 240, 240, 0.98); " +
+                "-fx-border-color: rgba(140, 140, 140, 0.8); " +
+                "-fx-border-width: 1px; " +
+                "-fx-border-radius: 12px; " +
+                "-fx-background-radius: 12px; " +
+                "-fx-font-weight: 600; " +
+                "-fx-padding: 12 24 12 24; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 0, 5);"
             );
         });
         
-        // 套用標籤樣式
+        // 套用標籤樣式 - 非常明亮的文字
         alert.getDialogPane().lookupAll(".label").forEach(node -> {
-            node.setStyle("-fx-text-fill: white;");
+            node.setStyle("-fx-text-fill: rgba(245, 245, 245, 0.98); -fx-font-weight: 600;");
+        });
+        
+        // 套用標題樣式
+        alert.getDialogPane().lookupAll(".header-panel").forEach(node -> {
+            node.setStyle(
+                "-fx-background-color: rgba(50, 50, 50, 0.98); " +
+                "-fx-text-fill: rgba(250, 250, 250, 0.98); " +
+                "-fx-border-color: rgba(130, 130, 130, 0.6); " +
+                "-fx-border-width: 0 0 1 0; " +
+                "-fx-background-radius: 16px 16px 0 0;"
+            );
+        });
+        
+        // 套用內容區域樣式
+        alert.getDialogPane().lookupAll(".content").forEach(node -> {
+            node.setStyle("-fx-background-color: transparent; -fx-padding: 24; -fx-text-fill: rgba(240, 240, 240, 0.98);");
         });
     }
     

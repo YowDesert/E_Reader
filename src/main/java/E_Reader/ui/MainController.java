@@ -14,13 +14,14 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
-import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
-import javafx.stage.Stage;
+import javafx.scene.paint.LinearGradient;
+import javafx.stage.*;
 import javafx.scene.image.Image;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Properties;
 import java.util.Timer;
@@ -28,8 +29,6 @@ import java.util.TimerTask;
 import javafx.animation.*;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.paint.Color;
-import javafx.stage.Screen;
-import javafx.stage.StageStyle;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
@@ -1112,84 +1111,68 @@ public class MainController {
      * 改進的showNotification方法 - 現代化通知設計
      */
     public void showNotification(String title, String message) {
-        // 創建現代化的通知彈窗
+        // 創建非阻塞的通知彈窗
         Stage notificationStage = new Stage();
         notificationStage.initStyle(StageStyle.UNDECORATED);
         notificationStage.initOwner(primaryStage);
         notificationStage.setAlwaysOnTop(true);
+        // 修復：設置為非模態窗口，不阻塞用戶操作
+        notificationStage.initModality(Modality.NONE);
 
         // 創建通知內容
         VBox notificationBox = new VBox(12);
         notificationBox.setPadding(new Insets(20, 24, 20, 24));
         notificationBox.setAlignment(Pos.CENTER_LEFT);
-        notificationBox.setMaxWidth(350);
-        notificationBox.setMinWidth(300);
+        notificationBox.setMaxWidth(320);
+        notificationBox.setMinWidth(280);
 
-        // 現代化毛玻璃背景效果 - 與檔案閱讀顏色樣式一致
+        // 修復：使用更深色的背景，文字設為偏灰色
         notificationBox.setStyle(
-                "-fx-background-color: linear-gradient(135deg, " +
-                        "rgba(16,16,16,0.98) 0%, " +
-                        "rgba(28,28,28,0.95) 30%, " +
-                        "rgba(20,20,20,0.98) 70%, " +
-                        "rgba(12,12,12,0.99) 100%); " +
-                        "-fx-border-color: linear-gradient(135deg, " +
-                        "rgba(52,152,219,0.6), rgba(155,89,182,0.6)); " +
+                "-fx-background-color: linear-gradient(to bottom right, #ffffff, #f4f4f4); " +
+                        "-fx-border-color: #e0e0e0; " +
                         "-fx-border-width: 1; " +
                         "-fx-border-radius: 16; " +
                         "-fx-background-radius: 16; " +
-                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 25, 0, 0, 8);"
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 12, 0, 0, 4); " +
+                        "-fx-padding: 16;"
         );
+
 
         // 頂部指示條
-        Rectangle topIndicator = new Rectangle(60, 4);
-        topIndicator.setFill(javafx.scene.paint.LinearGradient.valueOf(
-                "linear-gradient(to right, #3498db, #9b59b6)"
+        Rectangle topIndicator = new Rectangle(50, 3);
+        topIndicator.setFill(LinearGradient.valueOf(
+                "linear-gradient(to right, #4facfe, #00f2fe)"  // 漸層藍綠
         ));
-        topIndicator.setArcWidth(4);
-        topIndicator.setArcHeight(4);
+        topIndicator.setArcWidth(3);
+        topIndicator.setArcHeight(3);
 
-        // 標題標籤
+        // 標題文字
         Label titleLabel = new Label(title);
-        titleLabel.setStyle(
-                "-fx-text-fill: rgba(255,255,255,0.95); " +
-                        "-fx-font-size: 16px; " +
-                        "-fx-font-weight: 700; " +
-                        "-fx-font-family: 'SF Pro Display', 'Segoe UI', sans-serif;"
-        );
+        titleLabel.setStyle("-fx-text-fill: #111111; -fx-font-size: 16px; -fx-font-weight: bold;");
 
-        // 消息標籤
+// 消息文字
         Label messageLabel = new Label(message);
-        messageLabel.setStyle(
-                "-fx-text-fill: rgba(255,255,255,0.8); " +
-                        "-fx-font-size: 13px; " +
-                        "-fx-font-weight: 400; " +
-                        "-fx-wrap-text: true; " +
-                        "-fx-font-family: 'SF Pro Text', 'Segoe UI', sans-serif;"
-        );
-        messageLabel.setMaxWidth(300);
+        messageLabel.setStyle("-fx-text-fill: #333333; -fx-font-size: 13px;");
+        messageLabel.setWrapText(true);
+        messageLabel.setMaxWidth(280);
 
-        // 時間戳標籤
-        Label timeLabel = new Label(java.time.LocalTime.now().format(
-                java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-        ));
-        timeLabel.setStyle(
-                "-fx-text-fill: rgba(255,255,255,0.5); " +
-                        "-fx-font-size: 11px; " +
-                        "-fx-font-weight: 500;"
-        );
+// 時間文字
+        Label timeLabel = new Label(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")));
+        timeLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
 
-        // 圖標 - 根據標題選擇
+// 圖標
         Label iconLabel = new Label(getNotificationIcon(title));
         iconLabel.setStyle(
-                "-fx-font-size: 24px; " +
-                        "-fx-background-color: rgba(52,152,219,0.2); " +
-                        "-fx-padding: 8; " +
+                "-fx-font-size: 20px; " +
+                        "-fx-background-color: #e6f0ff; " +  // 淺藍背景
+                        "-fx-text-fill: #2980b9; " +
+                        "-fx-padding: 6; " +
                         "-fx-background-radius: 50%; " +
-                        "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.3), 4, 0, 0, 1);"
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);"
         );
 
         // 頂部容器（圖標 + 標題 + 時間）
-        HBox headerBox = new HBox(12);
+        HBox headerBox = new HBox(10);
         headerBox.setAlignment(Pos.CENTER_LEFT);
 
         VBox titleBox = new VBox(2);
@@ -1203,7 +1186,7 @@ public class MainController {
 
         // 分隔線
         Separator separator = new Separator();
-        separator.setStyle("-fx-background-color: rgba(255,255,255,0.1);");
+        separator.setStyle("-fx-background-color: rgba(255,255,255,0.15);");
 
         // 組裝通知內容
         notificationBox.getChildren().addAll(
@@ -1213,38 +1196,38 @@ public class MainController {
                 messageLabel
         );
 
-        // 關閉按鈕
+        // 修復：關閉按鈕設計為更小更不顯眼
         Button closeButton = new Button("×");
         closeButton.setStyle(
                 "-fx-background-color: transparent; " +
-                        "-fx-text-fill: rgba(255,255,255,0.6); " +
-                        "-fx-font-size: 18px; " +
+                        "-fx-text-fill: rgba(160, 160, 160, 0.6); " +  // 灰色關閉按鈕
+                        "-fx-font-size: 14px; " +
                         "-fx-font-weight: bold; " +
                         "-fx-cursor: hand; " +
-                        "-fx-background-radius: 12; " +
-                        "-fx-min-width: 24; " +
-                        "-fx-min-height: 24; " +
-                        "-fx-max-width: 24; " +
-                        "-fx-max-height: 24;"
+                        "-fx-background-radius: 10; " +
+                        "-fx-min-width: 20; " +
+                        "-fx-min-height: 20; " +
+                        "-fx-max-width: 20; " +
+                        "-fx-max-height: 20;"
         );
 
         closeButton.setOnMouseEntered(e -> {
             closeButton.setStyle(closeButton.getStyle() +
-                    "-fx-background-color: rgba(231,76,60,0.8); -fx-text-fill: white;");
+                    "-fx-background-color: rgba(231,76,60,0.7); -fx-text-fill: white;");
         });
 
         closeButton.setOnMouseExited(e -> {
             closeButton.setStyle(
                     "-fx-background-color: transparent; " +
-                            "-fx-text-fill: rgba(255,255,255,0.6); " +
-                            "-fx-font-size: 18px; " +
+                            "-fx-text-fill: rgba(160, 160, 160, 0.6); " +  // 灰色關閉按鈕
+                            "-fx-font-size: 14px; " +
                             "-fx-font-weight: bold; " +
                             "-fx-cursor: hand; " +
-                            "-fx-background-radius: 12; " +
-                            "-fx-min-width: 24; " +
-                            "-fx-min-height: 24; " +
-                            "-fx-max-width: 24; " +
-                            "-fx-max-height: 24;"
+                            "-fx-background-radius: 10; " +
+                            "-fx-min-width: 20; " +
+                            "-fx-min-height: 20; " +
+                            "-fx-max-width: 20; " +
+                            "-fx-max-height: 20;"
             );
         });
 
@@ -1254,66 +1237,128 @@ public class MainController {
 
         // 將關閉按鈕定位到右上角
         StackPane.setAlignment(closeButton, Pos.TOP_RIGHT);
-        StackPane.setMargin(closeButton, new Insets(12, 12, 0, 0));
+        StackPane.setMargin(closeButton, new Insets(8, 8, 0, 0));
         mainContainer.getChildren().add(closeButton);
 
         Scene notificationScene = new Scene(mainContainer);
         notificationScene.setFill(Color.TRANSPARENT);
         notificationStage.setScene(notificationScene);
 
-        // 定位通知視窗到右上角
+        // 修復：智能定位 - 自動選擇安全的顯示位置
         Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
-        notificationStage.setX(screenBounds.getMaxX() - 370);
-        notificationStage.setY(screenBounds.getMinY() + 20);
+        double notificationWidth = 320;
+        double notificationHeight = 120;
 
-        // 進入動畫 - 從右側滑入
-        TranslateTransition slideIn = new TranslateTransition(Duration.millis(400), mainContainer);
-        slideIn.setFromX(400);
+        // 預設位置：右上角，但避開可能的UI元素
+        // 通知顯示在主視窗的右上角，稍微往內縮一點點（例如 20px）
+        // 通知固定顯示在螢幕右上角
+        double targetX = screenBounds.getMaxX() - notificationWidth - 20;
+        double targetY = screenBounds.getMinY() + 80; // 距離螢幕頂部 80px
+
+        notificationStage.setX(targetX);
+        notificationStage.setY(targetY);
+
+// 通知從右側滑入（固定）
+        double fromX = 400;
+
+        TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), mainContainer);
+        slideIn.setFromX(fromX);
         slideIn.setToX(0);
         slideIn.setInterpolator(Interpolator.EASE_OUT);
 
-        FadeTransition fadeIn = new FadeTransition(Duration.millis(400), mainContainer);
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(350), mainContainer);
         fadeIn.setFromValue(0.0);
         fadeIn.setToValue(1.0);
 
-        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(400), mainContainer);
-        scaleIn.setFromX(0.8);
-        scaleIn.setFromY(0.8);
+        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(350), mainContainer);
+        scaleIn.setFromX(0.9);
+        scaleIn.setFromY(0.9);
         scaleIn.setToX(1.0);
         scaleIn.setToY(1.0);
         scaleIn.setInterpolator(Interpolator.EASE_OUT);
 
         ParallelTransition enterAnimation = new ParallelTransition(slideIn, fadeIn, scaleIn);
 
-        // 關閉動畫
+// 通知關閉動畫（固定向右滑出）
         Runnable closeNotification = () -> {
-            TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), mainContainer);
+            TranslateTransition slideOut = new TranslateTransition(Duration.millis(250), mainContainer);
             slideOut.setFromX(0);
-            slideOut.setToX(400);
+            slideOut.setToX(350); // 向右滑出
             slideOut.setInterpolator(Interpolator.EASE_IN);
 
-            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), mainContainer);
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(250), mainContainer);
             fadeOut.setFromValue(1.0);
             fadeOut.setToValue(0.0);
 
-            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(300), mainContainer);
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(250), mainContainer);
             scaleOut.setFromX(1.0);
             scaleOut.setFromY(1.0);
-            scaleOut.setToX(0.8);
-            scaleOut.setToY(0.8);
+            scaleOut.setToX(0.9);
+            scaleOut.setToY(0.9);
 
             ParallelTransition exitAnimation = new ParallelTransition(slideOut, fadeOut, scaleOut);
             exitAnimation.setOnFinished(e -> notificationStage.close());
             exitAnimation.play();
         };
 
+
+
         // 事件處理
         closeButton.setOnAction(e -> closeNotification.run());
 
-        // 點擊通知本體關閉
+        // 修復：點擊通知本體不再自動關閉，避免誤操作
+        // 只有點擊關閉按鈕才會關閉通知
         notificationBox.setOnMouseClicked(e -> {
-            if (e.getClickCount() == 1) {
+            // 移除自動關閉功能，只提供視覺反饋
+            if (e.getClickCount() == 2) {
+                // 雙擊才關閉
                 closeNotification.run();
+            } else {
+                // 單擊顯示閃爍效果表示收到點擊
+                FadeTransition blink = new FadeTransition(Duration.millis(100), notificationBox);
+                blink.setFromValue(1.0);
+                blink.setToValue(0.8);
+                blink.setCycleCount(2);
+                blink.setAutoReverse(true);
+                blink.play();
+            }
+        });
+        Timeline autoCloseTimeline = new Timeline(
+                new KeyFrame(Duration.seconds(4), e -> {
+                    if (notificationStage.isShowing()) {
+                        closeNotification.run();
+                    }
+                })
+        );
+        autoCloseTimeline.play();
+        // 修復：鼠標懸停效果改進
+        notificationBox.setOnMouseEntered(e -> {
+            // 懸停時輕微放大並增加陰影
+            ScaleTransition hoverScale = new ScaleTransition(Duration.millis(150), notificationBox);
+            hoverScale.setFromX(1.0);
+            hoverScale.setFromY(1.0);
+            hoverScale.setToX(1.02);
+            hoverScale.setToY(1.02);
+            hoverScale.play();
+
+            // 暫停自動關閉
+            if (autoCloseTimeline != null) {
+                autoCloseTimeline.pause();
+            }
+        });
+
+        notificationBox.setOnMouseExited(e -> {
+            // 恢復正常大小
+            ScaleTransition normalScale = new ScaleTransition(Duration.millis(150), notificationBox);
+            normalScale.setFromX(1.02);
+            normalScale.setFromY(1.02);
+            normalScale.setToX(1.0);
+            normalScale.setToY(1.0);
+            normalScale.play();
+
+            // 恢復自動關閉
+            if (autoCloseTimeline != null) {
+                autoCloseTimeline.play();
             }
         });
 
@@ -1321,19 +1366,24 @@ public class MainController {
         notificationStage.show();
         enterAnimation.play();
 
-        // 5秒後自動關閉
-        PauseTransition autoClose = new PauseTransition(Duration.seconds(5));
-        autoClose.setOnFinished(e -> {
-            if (notificationStage.isShowing()) {
+        // 修復：使用Timeline代替PauseTransition，更好的控制
+
+
+        // 修復：添加鍵盤快捷鍵支持（ESC關閉通知）
+        notificationScene.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
                 closeNotification.run();
             }
         });
-        autoClose.play();
 
-        // 懸停時暫停自動關閉
-        notificationBox.setOnMouseEntered(e -> autoClose.pause());
-        notificationBox.setOnMouseExited(e -> autoClose.play());
+        // 修復：防止通知堆積 - 如果已有通知在顯示，自動關閉舊的
+        if (currentNotificationStage != null && currentNotificationStage.isShowing()) {
+            currentNotificationStage.close();
+        }
+        currentNotificationStage = notificationStage;
     }
+
+    private Stage currentNotificationStage = null;
 
 
 
@@ -1613,7 +1663,7 @@ public class MainController {
 
         // 恢復按鈕狀態
         if (focusModeBtn != null) {
-            focusModeBtn.setText("🎯 專注");
+            focusModeBtn.setText("🎯 專注模式");
             focusModeBtn.setStyle(
                     "-fx-background-color: linear-gradient(to bottom, " +
                             "rgba(155,89,182,0.8), rgba(142,68,173,0.8)); " +
