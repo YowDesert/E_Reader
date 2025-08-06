@@ -560,155 +560,17 @@ public class UIControlsFactory {
     }
 
     /**
-     * 显示增强版设置对话框 - 修复版本
+     * 显示增强版设置对话框 - 使用新的 EnhancedSettingsDialog
      */
     private void showEnhancedSettingsDialog(MainController controller) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("⚙️ 應用程式設置");
-        dialog.setHeaderText("個人化你的閱讀體驗");
+        // 使用新的增強版設定對話框
+        EnhancedSettingsDialog settingsDialog = new EnhancedSettingsDialog(controller.getSettingsManager(), controller.getPrimaryStage());
+        settingsDialog.show();
 
-        // 修復：增強對話框樣式 - 提高背景對比度和邊框可見性
-        dialog.getDialogPane().setStyle(
-                "-fx-background-color: linear-gradient(to bottom, " +
-                        "rgba(45,45,45,0.98), rgba(35,35,35,0.98)); " +
-                        "-fx-border-color: rgba(255,255,255,0.6); " +
-                        "-fx-border-width: 2; " +
-                        "-fx-border-radius: 16; " +
-                        "-fx-background-radius: 16; " +
-                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 25, 0, 0, 8); " +
-                        "-fx-font-family: 'SF Pro Display', '.SF NS Text', 'Helvetica Neue', sans-serif;"
-        );
-
-        // 修復：強制設置對話框內容區域的文字顏色
-        Platform.runLater(() -> {
-            dialog.getDialogPane().lookupAll(".label").forEach(node -> {
-                node.setStyle(node.getStyle() + "; -fx-text-fill: white !important;");
-            });
-
-            dialog.getDialogPane().lookupAll(".text").forEach(node -> {
-                node.setStyle(node.getStyle() + "; -fx-fill: white !important;");
-            });
-
-            // 設置標題區域
-            if (dialog.getDialogPane().lookup(".header-panel") != null) {
-                dialog.getDialogPane().lookup(".header-panel").setStyle(
-                        "-fx-text-fill: white !important; " +
-                                "-fx-background-color: rgba(55,55,55,0.95); " +
-                                "-fx-border-color: rgba(255,255,255,0.3); " +
-                                "-fx-border-width: 0 0 1 0; " +
-                                "-fx-padding: 15;"
-                );
-            }
-        });
-
-        // 修复对话框标题文字颜色
-        dialog.getDialogPane().lookup(".header-panel").setStyle(
-                "-fx-text-fill: white; " +
-                        "-fx-background-color: rgba(45,45,45,0.9); " +
-                        "-fx-border-color: rgba(255,255,255,0.2); " +
-                        "-fx-border-width: 0 0 1 0;"
-        );
-
-        TabPane tabPane = new TabPane();
-        tabPane.setStyle(
-                "-fx-background-color: rgba(40,40,40,0.9); " +
-                        "-fx-tab-min-width: 120; " +
-                        "-fx-tab-max-width: 150; " +
-                        "-fx-border-color: rgba(255,255,255,0.2); " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 8; " +
-                        "-fx-background-radius: 8;"
-        );
-
-        // 修復：Tab標籤文字顏色
-        Platform.runLater(() -> {
-                    tabPane.lookupAll(".tab").forEach(node -> {
-                        node.setStyle(
-                                "-fx-text-fill: white !important; " +
-                                        "-fx-background-color: rgba(55,55,55,0.9); " +
-                                        "-fx-border-color: rgba(255,255,255,0.3); " +
-                                        "-fx-border-width: 1; " +
-                                        "-fx-border-radius: 8 8 0 0; " +
-                                        "-fx-background-radius: 8 8 0 0;"
-                        );
-                    });
-            tabPane.lookupAll(".tab:selected").forEach(node -> {
-                node.setStyle(
-                        "-fx-text-fill: white !important; " +
-                                "-fx-background-color: rgba(70,70,70,0.95); " +
-                                "-fx-border-color: rgba(52,152,219,0.8); " +
-                                "-fx-border-width: 2; " +
-                                "-fx-border-radius: 8 8 0 0; " +
-                                "-fx-background-radius: 8 8 0 0;"
-                );
-            });
-        });
-
-        // 1. 外觀主題標籤頁
-        Tab themeTab = createFixedThemeTab(controller);
-        themeTab.setText("🎨 外觀");
-
-        // 2. OCR設置標籤頁
-        Tab ocrTab = createFixedOcrTab(controller);
-        ocrTab.setText("🔧 OCR");
-
-        // 3. 功能選項標籤頁
-        Tab functionsTab = createFixedFunctionsTab(controller);
-        functionsTab.setText("⚙️ 功能");
-
-        tabPane.getTabs().addAll(themeTab, ocrTab, functionsTab);
-
-        dialog.getDialogPane().setContent(tabPane);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        // 修復：自定義按鈕樣式
-        Platform.runLater(() -> {
-            Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-            Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
-
-            if (okButton != null) {
-                okButton.setStyle(
-                        "-fx-background-color: linear-gradient(to bottom, " +
-                                "rgba(52,152,219,0.9), rgba(41,128,185,0.9)); " +
-                                "-fx-border-color: rgba(52,152,219,0.8); " +
-                                "-fx-border-width: 2; " +
-                                "-fx-border-radius: 10; " +
-                                "-fx-background-radius: 10; " +
-                                "-fx-text-fill: white !important; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-font-weight: 700; " +
-                                "-fx-padding: 10 20 10 20; " +
-                                "-fx-cursor: hand; " +
-                                "-fx-effect: dropshadow(gaussian, rgba(52,152,219,0.5), 8, 0, 0, 3);"
-                );
-            }
-
-            if (cancelButton != null) {
-                cancelButton.setStyle(
-                        "-fx-background-color: rgba(70,70,70,0.9); " +
-                                "-fx-border-color: rgba(255,255,255,0.4); " +
-                                "-fx-border-width: 2; " +
-                                "-fx-border-radius: 10; " +
-                                "-fx-background-radius: 10; " +
-                                "-fx-text-fill: white !important; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-font-weight: 600; " +
-                                "-fx-padding: 10 20 10 20; " +
-                                "-fx-cursor: hand;"
-                );
-            }
-        });
-
-        // 確保對話框完全載入後再顯示
-        Platform.runLater(() -> {
-            dialog.showAndWait().ifPresent(result -> {
-                if (result == ButtonType.OK) {
-                    saveAllSettings(controller, themeTab, ocrTab, functionsTab);
-                    controller.showNotification("設置已保存", "你的偏好設置已成功更新");
-                }
-            });
-        });
+        // 設定變更後重新套用設定
+        controller.applySettings();
     }
+
 
     private Tab createFixedFunctionsTab(MainController controller) {
         Tab tab = new Tab();

@@ -5,6 +5,7 @@ import E_Reader.filemanager.FileManagerController;
 import E_Reader.settings.SettingsManager;
 import E_Reader.utils.AlertHelper;
 import E_Reader.viewer.*;
+import javafx.util.StringConverter;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -1548,17 +1549,6 @@ public class MainController {
         }
     }
 
-    /**
-     * 改進的showSettingsDialog方法 - iOS風格設定對話框
-     */
-    /**
-     * 改進的showSettingsDialog方法 - 移除舊版本，使用UIControlsFactory中的新版本
-     */
-    public void showSettingsDialog() {
-        // 這個方法現在由UIControlsFactory中的showEnhancedSettingsDialog處理
-        // 此處保留以維持向後相容性
-        System.out.println("設定對話框已移至UIControlsFactory");
-    }
 
 
     /**
@@ -1782,6 +1772,17 @@ public class MainController {
         eyeCareBtnTransition.play();
     }
 
+    /**
+     * 顯示增強版設定對話框
+     */
+    public void showSettingsDialog() {
+        // 使用新的增強版設定對話框
+        EnhancedSettingsDialog settingsDialog = new EnhancedSettingsDialog(settingsManager, primaryStage);
+        settingsDialog.show();
+
+        // 設定變更後重新套用設定
+        applySettings();
+    }
 
 
     /**
