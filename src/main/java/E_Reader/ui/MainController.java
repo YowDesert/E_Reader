@@ -114,7 +114,12 @@ public class MainController {
         setupMainLayout();
         setupEventHandlers();
         setupKeyboardShortcuts();
-        applySettings();
+
+        // 確保設定正確載入和套用
+        settingsManager.loadSettings();
+        Platform.runLater(() -> {
+            applyAllSettings();  // 使用完整的設定套用方法
+        });
 
         // 啟動計時器
         timerManager.startReadingTimer(this::updateReadingTime);
@@ -733,6 +738,14 @@ public class MainController {
     private void updateUI() {
         updateReadingProgress();
         updateControlsForMode();
+
+        // 確保頁碼顯示狀態正確
+        if (pageLabel != null) {
+            boolean shouldShowPageNumbers = settingsManager.isShowPageNumbers();
+            if (shouldShowPageNumbers != pageLabel.isVisible()) {
+                updatePageNumbersVisibility();
+            }
+        }
     }
 
     private void updateReadingProgress() {
@@ -744,19 +757,23 @@ public class MainController {
             progress = (double) (imageViewer.getCurrentIndex() + 1) / imageViewer.getTotalPages();
         }
 
-        readingProgressBar.setProgress(progress);
+        if (readingProgressBar != null) {
+            readingProgressBar.setProgress(progress);
+        }
     }
 
     private void updateControlsForMode() {
         controlsFactory.updateControlsForMode(stateManager.isTextMode());
 
-        // 更新頁碼顯示
-        if (stateManager.isTextMode() && stateManager.getCurrentTextPages() != null) {
-            pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + stateManager.getCurrentTextPages().size());
-        } else if (!stateManager.isTextMode() && imageViewer.hasImages()) {
-            pageLabel.setText("頁面: " + (imageViewer.getCurrentIndex() + 1) + " / " + imageViewer.getTotalPages());
-        } else {
-            pageLabel.setText("頁面: 0 / 0");
+        // 只有在設定啟用頁碼顯示時才更新內容，但不改變顯示狀態
+        if (pageLabel != null) {
+            if (stateManager.isTextMode() && stateManager.getCurrentTextPages() != null) {
+                pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + stateManager.getCurrentTextPages().size());
+            } else if (!stateManager.isTextMode() && imageViewer.hasImages()) {
+                pageLabel.setText("頁面: " + (imageViewer.getCurrentIndex() + 1) + " / " + imageViewer.getTotalPages());
+            } else {
+                pageLabel.setText("頁面: 0 / 0");
+            }
         }
     }
 
@@ -1781,48 +1798,71 @@ public class MainController {
 
         // 設定UI更新回調，當設定變更時即時更新主界面
         settingsDialog.setUIUpdateCallback(() -> {
+            System.out.println("設定變更回調被觸發");
             Platform.runLater(() -> {
-                // 即時套用所有設定變更
-                applyAllSettings();
-                // 更新UI顯示
-                updateUI();
-                // 更新頁碼顯示狀態
-                updatePageNumbersVisibility();
-                // 更新控制元素顯示
-                updateControlsVisibility();
+                try {
+                    // 即時套用所有設定變更
+                    applyAllSettings();
+                    // 強制更新UI顯示
+                    updateUI();
+                    System.out.println("UI更新完成");
+                } catch (Exception e) {
+                    System.err.println("設定套用錯誤: " + e.getMessage());
+                    e.printStackTrace();
+                }
             });
         });
 
         settingsDialog.show();
     }
     private void applyAllSettings() {
-        // 1. 套用主題設定
-        SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
-        String backgroundColor = currentTheme.getBackgroundColor();
-        String textColor = currentTheme.getTextColor();
+        System.out.println("開始套用所有設定...");
 
-        // 更新背景色
-        if (imageViewer.getScrollPane() != null) {
-            String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
-            imageViewer.getScrollPane().setStyle(newStyle);
+        try {
+            // 1. 套用主題設定
+            SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+            String backgroundColor = currentTheme.getBackgroundColor();
+            String textColor = currentTheme.getTextColor();
+
+            // 更新背景色
+            if (imageViewer.getScrollPane() != null) {
+                String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
+                imageViewer.getScrollPane().setStyle(newStyle);
+            }
+
+            // 更新中央面板背景
+            updateCenterPaneBackground(currentTheme);
+
+            // 如果在文字模式，也更新文字渲染器的主題
+            if (stateManager.isTextMode()) {
+                textRenderer.setThemeColors(currentTheme);
+            }
+
+            // 2. 套用亮度設定
+            applyBrightnessSettings();
+
+            // 3. 套用頁碼顯示設定
+            updatePageNumbersVisibility();
+
+            // 4. 套用其他設定
+            imageViewer.setFitMode(settingsManager.getFitMode());
+
+            // 5. 更新護眼提醒
+            updateEyeCareReminder();
+
+            System.out.println("所有設定套用完成");
+
+            // 6. 強制刷新UI
+            Platform.runLater(() -> {
+                centerPane.requestLayout();
+                updateUI();
+                System.out.println("UI刷新完成");
+            });
+
+        } catch (Exception e) {
+            System.err.println("套用設定時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // 更新中央面板背景
-        updateCenterPaneBackground(currentTheme);
-
-        // 如果在文字模式，也更新文字渲染器的主題
-        if (stateManager.isTextMode()) {
-            textRenderer.setThemeColors(currentTheme);
-        }
-
-        // 2. 套用亮度設定
-        applyBrightnessSettings();
-
-        // 3. 套用其他設定
-        imageViewer.setFitMode(settingsManager.getFitMode());
-
-        // 4. 更新護眼提醒
-        updateEyeCareReminder();
     }
 
     /**
@@ -1849,7 +1889,9 @@ public class MainController {
         int brightness = settingsManager.getEyeCareBrightness();
         double opacity = brightness / 100.0;
 
-        // 套用到主要顯示區域
+        System.out.println("套用亮度設定: " + brightness + "% (透明度: " + opacity + ")");
+
+        // 套用到圖片檢視器 - 修正：使用 setOpacity 而不是 FadeTransition
         if (imageViewer.getImageView() != null) {
             imageViewer.getImageView().setOpacity(opacity);
         }
@@ -1857,6 +1899,31 @@ public class MainController {
         // 如果在文字模式，也套用到文字渲染器
         if (stateManager.isTextMode() && textRenderer.getMainContainer() != null) {
             textRenderer.getMainContainer().setOpacity(opacity);
+        }
+
+        // 套用到整個中央面板以確保所有內容都受到影響
+        if (centerPane != null) {
+            // 使用CSS濾鏡來調整亮度
+            String brightnessFilter = String.format("-fx-effect: dropshadow(gaussian, transparent, 0, 0, 0, 0); " +
+                    "-fx-background-color: rgba(0, 0, 0, %f);", 1.0 - opacity);
+
+            // 創建一個半透明覆蓋層來模擬亮度調整
+            if (centerPane.lookup("#brightnessOverlay") == null) {
+                javafx.scene.shape.Rectangle brightnessOverlay = new javafx.scene.shape.Rectangle();
+                brightnessOverlay.setId("brightnessOverlay");
+                brightnessOverlay.setMouseTransparent(true);
+                brightnessOverlay.widthProperty().bind(centerPane.widthProperty());
+                brightnessOverlay.heightProperty().bind(centerPane.heightProperty());
+                centerPane.getChildren().add(brightnessOverlay);
+            }
+
+            javafx.scene.shape.Rectangle overlay = (javafx.scene.shape.Rectangle) centerPane.lookup("#brightnessOverlay");
+            if (overlay != null) {
+                // 亮度越低，覆蓋層越深
+                double overlayOpacity = Math.max(0, (100 - brightness) / 100.0 * 0.5);
+                overlay.setFill(javafx.scene.paint.Color.BLACK);
+                overlay.setOpacity(overlayOpacity);
+            }
         }
     }
 
@@ -1866,22 +1933,31 @@ public class MainController {
     private void updatePageNumbersVisibility() {
         boolean showPageNumbers = settingsManager.isShowPageNumbers();
 
-        if (pageLabel != null) {
-            pageLabel.setVisible(showPageNumbers);
-            pageLabel.setManaged(showPageNumbers);
+        System.out.println("更新頁碼顯示狀態: " + showPageNumbers);
 
-            // 添加淡入淡出動畫
-            if (showPageNumbers && pageLabel.getOpacity() < 1.0) {
-                FadeTransition fadeIn = new FadeTransition(Duration.millis(300), pageLabel);
-                fadeIn.setFromValue(0.0);
-                fadeIn.setToValue(1.0);
-                fadeIn.play();
-            } else if (!showPageNumbers && pageLabel.getOpacity() > 0.0) {
-                FadeTransition fadeOut = new FadeTransition(Duration.millis(300), pageLabel);
-                fadeOut.setFromValue(1.0);
-                fadeOut.setToValue(0.0);
-                fadeOut.play();
+        if (pageLabel != null) {
+            if (showPageNumbers) {
+                // 顯示頁碼
+                pageLabel.setVisible(true);
+                pageLabel.setManaged(true);
+                pageLabel.setOpacity(1.0);
+
+                System.out.println("頁碼標籤已顯示");
+            } else {
+                // 隱藏頁碼
+                pageLabel.setVisible(false);
+                pageLabel.setManaged(false);
+                pageLabel.setOpacity(0.0);
+
+                System.out.println("頁碼標籤已隱藏");
             }
+
+            // 確保立即重新布局
+            Platform.runLater(() -> {
+                centerPane.requestLayout();
+            });
+        } else {
+            System.err.println("錯誤: pageLabel 為 null");
         }
     }
 

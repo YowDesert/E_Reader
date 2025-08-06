@@ -102,6 +102,7 @@ public class SettingsManager {
     public void loadSettings() {
         try (InputStream input = new FileInputStream(SETTINGS_FILE)) {
             settings.load(input);
+            System.out.println("設定已載入: " + SETTINGS_FILE);
 
             // 從 Properties 載入設定
             String fitModeStr = settings.getProperty("fitMode", "FIT_WIDTH");
@@ -123,21 +124,22 @@ public class SettingsManager {
             enableTouchNavigation = Boolean.parseBoolean(settings.getProperty("enableTouchNavigation", "true"));
             eyeCareMode = Boolean.parseBoolean(settings.getProperty("eyeCareMode", "false"));
             nightMode = Boolean.parseBoolean(settings.getProperty("nightMode", "false"));
+            rememberLastFile = Boolean.parseBoolean(settings.getProperty("rememberLastFile", "true"));
 
             try {
                 defaultZoomLevel = Double.parseDouble(settings.getProperty("defaultZoomLevel", "1.0"));
                 eyeCareBrightness = Integer.parseInt(settings.getProperty("eyeCareBrightness", "80"));
+                autoSaveInterval = Integer.parseInt(settings.getProperty("autoSaveInterval", "30"));
                 nightModeStartHour = Integer.parseInt(settings.getProperty("nightModeStartHour", "20"));
                 nightModeEndHour = Integer.parseInt(settings.getProperty("nightModeEndHour", "7"));
             } catch (NumberFormatException e) {
                 defaultZoomLevel = 1.0;
                 eyeCareBrightness = 80;
+                autoSaveInterval = 30;
                 nightModeStartHour = 20;
                 nightModeEndHour = 7;
             }
 
-            rememberLastFile = Boolean.parseBoolean(settings.getProperty("rememberLastFile", "true"));
-            
             String ocrModelStr = settings.getProperty("ocrModel", "FAST");
             try {
                 ocrModel = OcrModel.valueOf(ocrModelStr);
@@ -145,32 +147,46 @@ public class SettingsManager {
                 ocrModel = OcrModel.FAST;
             }
 
+            System.out.println("載入的設定 - 顯示頁碼: " + showPageNumbers + ", 亮度: " + eyeCareBrightness + ", 主題: " + themeMode);
+
         } catch (IOException e) {
+            System.out.println("設定檔不存在或無法讀取，使用預設設定");
             loadDefaultSettings();
         }
     }
+    public void applySettingsImmediately() {
+        // 觸發設定的立即保存
+        saveSettings();
+        System.out.println("設定立即保存完成");
+    }
+
 
     public void saveSettings() {
-        // 更新Properties中的所有設定
-        settings.setProperty("fitMode", fitMode.toString());
-        settings.setProperty("backgroundColor", backgroundColor);
-        settings.setProperty("showPageNumbers", String.valueOf(showPageNumbers));
-        settings.setProperty("enableTouchNavigation", String.valueOf(enableTouchNavigation));
-        settings.setProperty("autoSaveInterval", String.valueOf(autoSaveInterval));
-        settings.setProperty("defaultZoomLevel", String.valueOf(defaultZoomLevel));
-        settings.setProperty("rememberLastFile", String.valueOf(rememberLastFile));
-        settings.setProperty("themeMode", themeMode.toString());
-        settings.setProperty("eyeCareMode", String.valueOf(eyeCareMode));
-        settings.setProperty("eyeCareBrightness", String.valueOf(eyeCareBrightness));
-        settings.setProperty("nightMode", String.valueOf(nightMode));
-        settings.setProperty("nightModeStartHour", String.valueOf(nightModeStartHour));
-        settings.setProperty("nightModeEndHour", String.valueOf(nightModeEndHour));
-        settings.setProperty("ocrModel", ocrModel.toString());
+        try {
+            // 更新Properties中的所有設定
+            settings.setProperty("fitMode", fitMode.toString());
+            settings.setProperty("backgroundColor", backgroundColor);
+            settings.setProperty("showPageNumbers", String.valueOf(showPageNumbers));
+            settings.setProperty("enableTouchNavigation", String.valueOf(enableTouchNavigation));
+            settings.setProperty("autoSaveInterval", String.valueOf(autoSaveInterval));
+            settings.setProperty("defaultZoomLevel", String.valueOf(defaultZoomLevel));
+            settings.setProperty("rememberLastFile", String.valueOf(rememberLastFile));
+            settings.setProperty("themeMode", themeMode.toString());
+            settings.setProperty("eyeCareMode", String.valueOf(eyeCareMode));
+            settings.setProperty("eyeCareBrightness", String.valueOf(eyeCareBrightness));
+            settings.setProperty("nightMode", String.valueOf(nightMode));
+            settings.setProperty("nightModeStartHour", String.valueOf(nightModeStartHour));
+            settings.setProperty("nightModeEndHour", String.valueOf(nightModeEndHour));
+            settings.setProperty("ocrModel", ocrModel.toString());
 
-        try (OutputStream output = new FileOutputStream(SETTINGS_FILE)) {
-            settings.store(output, "E-Reader Settings");
+            // 確保設定檔被正確保存
+            try (OutputStream output = new FileOutputStream(SETTINGS_FILE)) {
+                settings.store(output, "E-Reader Settings - " + java.time.LocalDateTime.now());
+                System.out.println("設定已保存到: " + SETTINGS_FILE);
+            }
         } catch (IOException e) {
             System.err.println("無法儲存設定檔: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

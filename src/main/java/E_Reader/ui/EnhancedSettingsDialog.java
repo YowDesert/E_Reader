@@ -15,6 +15,9 @@ import javafx.stage.StageStyle;
 import javafx.animation.*;
 import javafx.util.Duration;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 /**
  * 增強版設定對話框 - 現代化iOS風格設計 + 即時預覽功能
  */
@@ -23,6 +26,7 @@ public class EnhancedSettingsDialog {
     private final SettingsManager settingsManager;
     private final Stage parentStage;
     private Stage dialogStage;
+    private Timer brightnessUpdateTimer;
 
     // 添加主界面更新回調接口
     private Runnable uiUpdateCallback;
@@ -35,6 +39,7 @@ public class EnhancedSettingsDialog {
     private CheckBox showPageNumbersCheckBox;
     private CheckBox enableTouchNavCheckBox;
     private Slider autoSaveIntervalSlider;
+    private Timer autoSaveUpdateTimer;
 
     // 預覽組件
     private VBox themePreviewBox;
@@ -191,11 +196,19 @@ public class EnhancedSettingsDialog {
 
             // 修改：直接應用設定並更新預覽，不使用臨時變數
             themeRadio.setOnAction(e -> {
-                settingsManager.setThemeMode(theme);
-                updateThemePreview();
-                // 即時更新UI
-                if (uiUpdateCallback != null) {
-                    uiUpdateCallback.run();
+                if (themeRadio.isSelected()) {
+                    System.out.println("主題變更為: " + theme.getDisplayName());
+
+                    settingsManager.setThemeMode(theme);
+                    settingsManager.saveSettings();
+                    updateThemePreview();
+
+                    // 即時更新UI
+                    if (uiUpdateCallback != null) {
+                        Platform.runLater(() -> {
+                            uiUpdateCallback.run();
+                        });
+                    }
                 }
             });
 
@@ -235,14 +248,30 @@ public class EnhancedSettingsDialog {
             int brightness = newVal.intValue();
             brightnessLabel.setText(String.format("%.0f%%", newVal.doubleValue()));
 
-            // 即時應用亮度設定
-            settingsManager.setEyeCareBrightness(brightness);
-            updateBrightnessPreview();
-
-            // 即時更新UI亮度
-            if (uiUpdateCallback != null) {
-                uiUpdateCallback.run();
+            // 防止過於頻繁的更新，使用去抖動機制
+            if (brightnessUpdateTimer != null) {
+                brightnessUpdateTimer.cancel();
             }
+
+            brightnessUpdateTimer = new Timer();
+            brightnessUpdateTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    Platform.runLater(() -> {
+                        // 即時應用亮度設定
+                        settingsManager.setEyeCareBrightness(brightness);
+                        settingsManager.saveSettings();
+                        updateBrightnessPreview();
+
+                        // 即時更新UI亮度
+                        if (uiUpdateCallback != null) {
+                            uiUpdateCallback.run();
+                        }
+
+                        System.out.println("亮度設定已更新: " + brightness + "%");
+                    });
+                }
+            }, 200); // 200ms 延遲，避免過於頻繁的更新
         });
 
         HBox brightnessControl = new HBox(15);
@@ -553,9 +582,17 @@ public class EnhancedSettingsDialog {
 
         // 修改：即時應用設定變更
         rememberFileCheckBox.setOnAction(e -> {
-            settingsManager.setRememberLastFile(rememberFileCheckBox.isSelected());
+            boolean isSelected = rememberFileCheckBox.isSelected();
+
+            System.out.println("記住檔案設定變更: " + isSelected);
+
+            settingsManager.setRememberLastFile(isSelected);
             settingsManager.saveSettings();
+
+            String message = isSelected ? "將會記住最後開啟的檔案" : "不會記住最後開啟的檔案";
+            System.out.println(message);
         });
+
 
         Label fileHelpLabel = new Label("💡 啟用後會在下次開啟應用程式時自動載入上次閱讀的檔案和頁碼");
         fileHelpLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 11px; -fx-wrap-text: true;");
@@ -572,12 +609,23 @@ public class EnhancedSettingsDialog {
 
         // 修改：即時應用頁碼顯示設定
         showPageNumbersCheckBox.setOnAction(e -> {
-            settingsManager.setShowPageNumbers(showPageNumbersCheckBox.isSelected());
+            boolean isSelected = showPageNumbersCheckBox.isSelected();
+
+            System.out.println("頁碼顯示設定變更: " + isSelected);
+
+            settingsManager.setShowPageNumbers(isSelected);
             settingsManager.saveSettings();
+
             // 即時更新UI
             if (uiUpdateCallback != null) {
-                uiUpdateCallback.run();
+                Platform.runLater(() -> {
+                    uiUpdateCallback.run();
+                });
             }
+
+            // 顯示變更確認
+            String message = isSelected ? "頁碼顯示已啟用" : "頁碼顯示已關閉";
+            System.out.println(message);
         });
 
         Label interfaceHelpLabel = new Label("📄 控制右下角頁碼顯示，關閉可獲得更清爽的閱讀體驗");
@@ -593,15 +641,15 @@ public class EnhancedSettingsDialog {
         enableTouchNavCheckBox.setSelected(settingsManager.isEnableTouchNavigation());
         enableTouchNavCheckBox.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
 
-        // 修改：即時應用觸控設定
         enableTouchNavCheckBox.setOnAction(e -> {
-            settingsManager.setEnableTouchNavigation(enableTouchNavCheckBox.isSelected());
+            boolean isSelected = enableTouchNavCheckBox.isSelected();
+
+            System.out.println("觸控導覽設定變更: " + isSelected);
+
+            settingsManager.setEnableTouchNavigation(isSelected);
             settingsManager.saveSettings();
-            // 即時更新UI
-            if (uiUpdateCallback != null) {
-                uiUpdateCallback.run();
-            }
         });
+
 
         Label touchHelpLabel = new Label("👆 啟用觸控螢幕支援，可用手勢進行頁面導覽");
         touchHelpLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 11px; -fx-wrap-text: true;");
@@ -635,10 +683,24 @@ public class EnhancedSettingsDialog {
         autoSaveIntervalSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             int interval = newVal.intValue();
             intervalLabel.setText(String.format("%.0f 秒", newVal.doubleValue()));
-            settingsManager.setAutoSaveInterval(interval);
-            settingsManager.saveSettings();
-        });
 
+            // 使用去抖動機制避免過於頻繁的更新
+            if (autoSaveUpdateTimer != null) {
+                autoSaveUpdateTimer.cancel();
+            }
+
+            autoSaveUpdateTimer = new Timer();
+            autoSaveUpdateTimer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    Platform.runLater(() -> {
+                        settingsManager.setAutoSaveInterval(interval);
+                        settingsManager.saveSettings();
+                        System.out.println("自動保存間隔已更新: " + interval + " 秒");
+                    });
+                }
+            }, 300);
+        });
         HBox intervalControl = new HBox(15);
         intervalControl.setAlignment(Pos.CENTER_LEFT);
         intervalControl.getChildren().addAll(autoSaveIntervalSlider, intervalLabel);
@@ -825,7 +887,36 @@ public class EnhancedSettingsDialog {
         dialogStage.show();
     }
 
+
+    // 4. 修正關閉對話框時清理資源
     public void close() {
+        // 清理計時器
+        if (brightnessUpdateTimer != null) {
+            brightnessUpdateTimer.cancel();
+            brightnessUpdateTimer = null;
+        }
+
+        // 確保所有設定都已保存
+        settingsManager.saveSettings();
+
         dialogStage.close();
     }
+//    @Override
+//    public void close() {
+//        // 清理所有計時器
+//        if (brightnessUpdateTimer != null) {
+//            brightnessUpdateTimer.cancel();
+//            brightnessUpdateTimer = null;
+//        }
+//
+//        if (autoSaveUpdateTimer != null) {
+//            autoSaveUpdateTimer.cancel();
+//            autoSaveUpdateTimer = null;
+//        }
+//
+//        // 確保所有設定都已保存
+//        settingsManager.saveSettings();
+//
+//        dialogStage.close();
+//    }
 }
