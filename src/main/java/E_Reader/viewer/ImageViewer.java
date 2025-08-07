@@ -1,5 +1,6 @@
 package E_Reader.viewer;
 
+import javafx.application.Platform;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
@@ -270,5 +271,60 @@ public class ImageViewer {
 
     public StackPane getImageContainer() {
         return imageContainer;
+    }
+
+    public void refreshCurrentImage() {
+        if (hasImages() && currentIndex >= 0 && currentIndex < images.size()) {
+            try {
+                // 重新設置當前圖片
+                Image currentImage = images.get(currentIndex);
+                imageView.setImage(currentImage);
+
+
+                // 強制重新計算布局
+                Platform.runLater(() -> {
+                    imageView.applyCss();
+                    imageView.autosize();
+                    scrollPane.applyCss();
+                    scrollPane.requestLayout();
+                });
+
+                System.out.println("當前圖片已重新整理，索引: " + currentIndex);
+            } catch (Exception e) {
+                System.err.println("重新整理圖片時發生錯誤: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * **新增：強制重新套用所有視覺設定**
+     */
+    public void forceRefreshDisplay() {
+        if (hasImages()) {
+            refreshCurrentImage();
+
+            // 重新套用所有視覺效果
+            Platform.runLater(() -> {
+                // 重新計算滾動面板大小
+                scrollPane.setFitToWidth(true);
+                scrollPane.setFitToHeight(true);
+
+                // 重新套用背景樣式
+                scrollPane.applyCss();
+
+                // 重新定位至中央
+                centerImage();
+            });
+        }
+    }
+
+    /**
+     * **新增：將圖片居中顯示**
+     */
+    private void centerImage() {
+        Platform.runLater(() -> {
+            scrollPane.setHvalue(0.5);
+            scrollPane.setVvalue(0.5);
+        });
     }
 }

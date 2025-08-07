@@ -5,6 +5,9 @@ import E_Reader.filemanager.FileManagerController;
 import E_Reader.settings.SettingsManager;
 import E_Reader.utils.AlertHelper;
 import E_Reader.viewer.*;
+import javafx.animation.*;
+import javafx.scene.layout.*;
+import javafx.stage.*;
 import javafx.util.StringConverter;
 
 import javafx.application.Platform;
@@ -14,9 +17,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
-import javafx.stage.*;
 import javafx.scene.image.Image;
 
 import java.io.File;
@@ -27,9 +29,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
-import javafx.animation.*;
+
 import javafx.geometry.Rectangle2D;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
@@ -590,6 +591,12 @@ public class MainController {
             stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
         }
         updateUI();
+
+        // **新增：確保頁碼等UI元素正確顯示**
+        Platform.runLater(() -> {
+            updatePageNumbersVisibility();
+            applyBrightnessSettings();
+        });
     }
 
     public void goToLastPage() {
@@ -1730,7 +1737,7 @@ public class MainController {
         }
 
         // 套用其他設定
-        imageViewer.setFitMode(settingsManager.getFitMode());
+        imageViewer.setFitMode(E_Reader.viewer.ImageViewer.FitMode.valueOf(settingsManager.getFitMode().toString()));
 
         // 更新按鈕狀態（帶動畫效果）
         updateButtonStatesWithAnimation();
@@ -1793,19 +1800,68 @@ public class MainController {
      * 顯示增強版設定對話框
      */
     public void showSettingsDialog() {
-        // 使用新的增強版設定對話框
         EnhancedSettingsDialog settingsDialog = new EnhancedSettingsDialog(settingsManager, primaryStage);
 
-        // 設定UI更新回調，當設定變更時即時更新主界面
         settingsDialog.setUIUpdateCallback(() -> {
             System.out.println("設定變更回調被觸發");
+
             Platform.runLater(() -> {
                 try {
-                    // 即時套用所有設定變更
-                    applyAllSettings();
-                    // 強制更新UI顯示
-                    updateUI();
-                    System.out.println("UI更新完成");
+                    // **修正1：使用強化版立即套用方法**
+                    applyAllSettingsImmediate();
+
+                    // **修正2：額外的確保機制**
+                    Timeline extraEnsure = new Timeline();
+
+                    extraEnsure.getKeyFrames().add(
+                            new KeyFrame(Duration.millis(25), e -> {
+                                // 確保頁碼顯示正確
+                                if (pageLabel != null) {
+                                    boolean shouldShow = settingsManager.isShowPageNumbers();
+                                    pageLabel.setVisible(shouldShow);
+                                    pageLabel.setManaged(shouldShow);
+                                    System.out.println("頁碼顯示狀態更新: " + shouldShow);
+
+                                    if (shouldShow) {
+                                        updateControlsForMode();
+                                    }
+                                }
+
+                                // 確保亮度正確
+                                int brightness = settingsManager.getEyeCareBrightness();
+                                if (imageViewer.getImageView() != null) {
+                                    imageViewer.getImageView().setOpacity(brightness / 100.0);
+                                }
+
+                                // 確保主題正確套用
+                                SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+                                updateCenterPaneBackgroundImmediate(currentTheme);
+
+                                System.out.println("25ms額外確保完成");
+                            })
+                    );
+
+                    extraEnsure.getKeyFrames().add(
+                            new KeyFrame(Duration.millis(75), e -> {
+                                // 最終確保
+                                updateUI();
+                                forceUIRefresh();
+                                
+                                // 強制重新布局
+                                if (centerPane != null) {
+                                    centerPane.requestLayout();
+                                    if (centerPane.getParent() != null) {
+                                        centerPane.getParent().requestLayout();
+                                    }
+                                }
+                                
+                                System.out.println("75ms最終確保完成");
+                            })
+                    );
+
+                    extraEnsure.play();
+
+                    System.out.println("增強UI更新完成");
                 } catch (Exception e) {
                     System.err.println("設定套用錯誤: " + e.getMessage());
                     e.printStackTrace();
@@ -1815,7 +1871,7 @@ public class MainController {
 
         settingsDialog.show();
     }
-    private void applyAllSettings() {
+    public void applyAllSettings() {
         System.out.println("開始套用所有設定...");
 
         try {
@@ -1824,44 +1880,115 @@ public class MainController {
             String backgroundColor = currentTheme.getBackgroundColor();
             String textColor = currentTheme.getTextColor();
 
-            // 更新背景色
+            // **修正：立即更新背景色**
             if (imageViewer.getScrollPane() != null) {
                 String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
                 imageViewer.getScrollPane().setStyle(newStyle);
             }
 
-            // 更新中央面板背景
+            // **修正：更新主場景背景**
+            if (primaryStage.getScene() != null) {
+                primaryStage.getScene().getRoot().setStyle(
+                        "-fx-background-color: " + backgroundColor + ";"
+                );
+            }
+
+            // 2. **修正：立即套用亮度設定**
+            applyBrightnessSettingsImmediate();
+
+            // 3. **修正：立即更新頁碼顯示**
+            updatePageNumbersVisibilityImmediate();
+
+            // 4. 套用其他設定
+            imageViewer.setFitMode(E_Reader.viewer.ImageViewer.FitMode.valueOf(settingsManager.getFitMode().toString()));
+
+            // 5. 更新中央面板背景
             updateCenterPaneBackground(currentTheme);
 
-            // 如果在文字模式，也更新文字渲染器的主題
+            // 6. 如果在文字模式，也更新文字渲染器的主題
             if (stateManager.isTextMode()) {
                 textRenderer.setThemeColors(currentTheme);
             }
 
-            // 2. 套用亮度設定
-            applyBrightnessSettings();
-
-            // 3. 套用頁碼顯示設定
-            updatePageNumbersVisibility();
-
-            // 4. 套用其他設定
-            imageViewer.setFitMode(settingsManager.getFitMode());
-
-            // 5. 更新護眼提醒
-            updateEyeCareReminder();
+            // 7. **修正：強制UI更新**
+            Platform.runLater(() -> {
+                updateUI();
+                centerPane.requestLayout();
+                if (centerPane.getParent() != null) {
+                    centerPane.getParent().requestLayout();
+                }
+            });
 
             System.out.println("所有設定套用完成");
-
-            // 6. 強制刷新UI
-            Platform.runLater(() -> {
-                centerPane.requestLayout();
-                updateUI();
-                System.out.println("UI刷新完成");
-            });
 
         } catch (Exception e) {
             System.err.println("套用設定時發生錯誤: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+
+    // 新增：立即更新頁碼顯示的方法
+    private void updatePageNumbersVisibilityImmediate() {
+        boolean showPageNumbers = settingsManager.isShowPageNumbers();
+
+        System.out.println("立即更新頁碼顯示狀態: " + showPageNumbers);
+
+        if (pageLabel != null) {
+            if (showPageNumbers) {
+                pageLabel.setVisible(true);
+                pageLabel.setManaged(true);
+                pageLabel.setOpacity(1.0);
+                pageLabel.setDisable(false);
+                System.out.println("頁碼標籤已立即顯示");
+            } else {
+                pageLabel.setVisible(false);
+                pageLabel.setManaged(false);
+                pageLabel.setOpacity(0.0);
+                pageLabel.setDisable(true);
+                System.out.println("頁碼標籤已立即隱藏");
+            }
+
+            // **立即強制重新布局**
+            if (centerPane != null) {
+                centerPane.autosize();
+                centerPane.requestLayout();
+                if (centerPane.getParent() != null) {
+                    centerPane.getParent().requestLayout();
+                }
+            }
+
+            // 強制更新UI
+            Platform.runLater(() -> {
+                updateUI();
+                if (controlsContainer != null) {
+                    controlsContainer.requestLayout();
+                }
+            });
+        } else {
+            System.err.println("錯誤: pageLabel 為 null");
+        }
+    }
+
+    // 新增：更新亮度覆蓋層的方法
+    private void updateBrightnessOverlay(int brightness) {
+        if (centerPane != null) {
+            javafx.scene.shape.Rectangle overlay = (javafx.scene.shape.Rectangle) centerPane.lookup("#brightnessOverlay");
+
+            if (overlay == null) {
+                // 創建新的覆蓋層
+                overlay = new javafx.scene.shape.Rectangle();
+                overlay.setId("brightnessOverlay");
+                overlay.setMouseTransparent(true);
+                overlay.widthProperty().bind(centerPane.widthProperty());
+                overlay.heightProperty().bind(centerPane.heightProperty());
+                centerPane.getChildren().add(overlay);
+            }
+
+            // 亮度越低，覆蓋層越深
+            double overlayOpacity = Math.max(0, (100 - brightness) / 100.0 * 0.5);
+            overlay.setFill(javafx.scene.paint.Color.BLACK);
+            overlay.setOpacity(overlayOpacity);
         }
     }
 
@@ -1937,24 +2064,24 @@ public class MainController {
 
         if (pageLabel != null) {
             if (showPageNumbers) {
-                // 顯示頁碼
                 pageLabel.setVisible(true);
                 pageLabel.setManaged(true);
                 pageLabel.setOpacity(1.0);
-
                 System.out.println("頁碼標籤已顯示");
             } else {
-                // 隱藏頁碼
                 pageLabel.setVisible(false);
                 pageLabel.setManaged(false);
                 pageLabel.setOpacity(0.0);
-
                 System.out.println("頁碼標籤已隱藏");
             }
 
-            // 確保立即重新布局
+            // **新增：強制重新布局**
             Platform.runLater(() -> {
+                centerPane.autosize();
                 centerPane.requestLayout();
+                if (centerPane.getParent() != null) {
+                    centerPane.getParent().requestLayout();
+                }
             });
         } else {
             System.err.println("錯誤: pageLabel 為 null");
@@ -2017,7 +2144,291 @@ public class MainController {
         }
     }
 
+    private void applyAllSettingsImmediate() {
+        System.out.println("開始強化版立即套用所有設定...");
 
+        try {
+            // **步驟1：重新載入設定檔確保最新**
+            settingsManager.loadSettings();
 
+            // **步驟2：立即套用主題設定**
+            SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+            String backgroundColor = currentTheme.getBackgroundColor();
+            String textColor = currentTheme.getTextColor();
 
+            // 立即更新背景色
+            if (imageViewer.getScrollPane() != null) {
+                String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
+                imageViewer.getScrollPane().setStyle(newStyle);
+            }
+
+            // 立即更新主場景背景
+            if (primaryStage.getScene() != null) {
+                primaryStage.getScene().getRoot().setStyle(
+                        "-fx-background-color: " + backgroundColor + ";"
+                );
+            }
+
+            // **步驟3：立即套用亮度設定**
+            int brightness = settingsManager.getEyeCareBrightness();
+            double opacity = brightness / 100.0;
+
+            if (imageViewer.getImageView() != null) {
+                imageViewer.getImageView().setOpacity(opacity);
+            }
+
+            if (stateManager.isTextMode() && textRenderer.getMainContainer() != null) {
+                textRenderer.getMainContainer().setOpacity(opacity);
+            }
+
+            // **步驟4：立即更新頁碼顯示**
+            boolean showPageNumbers = settingsManager.isShowPageNumbers();
+            System.out.println("立即套用頁碼顯示設定: " + showPageNumbers);
+
+            if (pageLabel != null) {
+                pageLabel.setVisible(showPageNumbers);
+                pageLabel.setManaged(showPageNumbers);
+                pageLabel.setOpacity(showPageNumbers ? 1.0 : 0.0);
+
+                // 如果顯示頁碼，確保內容是最新的
+                if (showPageNumbers) {
+                    updateControlsForMode();
+                }
+            }
+
+            // **步驟5：強制UI重繪**
+            Platform.runLater(() -> {
+                if (centerPane != null) {
+                    centerPane.applyCss();
+                    centerPane.autosize();
+                    centerPane.requestLayout();
+                }
+
+                if (primaryStage.getScene() != null) {
+                    primaryStage.getScene().getRoot().applyCss();
+                    primaryStage.getScene().getRoot().requestLayout();
+                }
+
+                // 更新UI狀態
+                updateUI();
+            });
+
+            System.out.println("強化版設定套用完成");
+
+        } catch (Exception e) {
+            System.err.println("強化版設定套用失敗: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * **新增：立即套用主題設定**
+     */
+    private void applyThemeSettingsImmediate() {
+        SettingsManager.ThemeMode currentTheme = settingsManager.getCurrentTheme();
+        String backgroundColor = currentTheme.getBackgroundColor();
+        String textColor = currentTheme.getTextColor();
+
+        System.out.println("立即套用主題: " + currentTheme.getDisplayName());
+
+        // **立即更新背景色**
+        if (imageViewer.getScrollPane() != null) {
+            String newStyle = "-fx-background: " + backgroundColor + "; -fx-background-color: " + backgroundColor + ";";
+            imageViewer.getScrollPane().setStyle(newStyle);
+        }
+
+        // **立即更新主場景背景**
+        if (primaryStage.getScene() != null) {
+            primaryStage.getScene().getRoot().setStyle(
+                    "-fx-background-color: " + backgroundColor + ";"
+            );
+        }
+
+        // **立即更新中央面板背景**
+        updateCenterPaneBackgroundImmediate(currentTheme);
+
+        // **如果在文字模式，立即更新文字渲染器的主題**
+        if (stateManager.isTextMode()) {
+            textRenderer.setThemeColors(currentTheme);
+        }
+    }
+
+    /**
+     * **新增：立即更新中央面板背景**
+     */
+    private void updateCenterPaneBackgroundImmediate(SettingsManager.ThemeMode theme) {
+        String bgGradient = switch (theme) {
+            case LIGHT -> "-fx-background-color: linear-gradient(to bottom, rgba(248,248,248,0.98) 0%, rgba(255,255,255,0.95) 100%);";
+            case DARK -> "-fx-background-color: linear-gradient(to bottom, rgba(18,18,18,0.98) 0%, rgba(25,25,25,0.95) 100%);";
+            case BLACK -> "-fx-background-color: linear-gradient(to bottom, rgba(0,0,0,0.98) 0%, rgba(8,8,8,0.95) 100%);";
+            case EYE_CARE -> "-fx-background-color: linear-gradient(to bottom, rgba(26,26,15,0.98) 0%, rgba(32,32,20,0.95) 100%);";
+            case SEPIA -> "-fx-background-color: linear-gradient(to bottom, rgba(244,236,216,0.98) 0%, rgba(240,230,210,0.95) 100%);";
+            default -> "-fx-background-color: linear-gradient(to bottom, rgba(18,18,18,0.98) 0%, rgba(25,25,25,0.95) 100%);";
+        };
+
+        if (centerPane != null) {
+            centerPane.setStyle(bgGradient);
+        }
+    }
+
+    /**
+     * **修正：立即套用亮度設定**
+     */
+    private void applyBrightnessSettingsImmediate() {
+        int brightness = settingsManager.getEyeCareBrightness();
+        double opacity = brightness / 100.0;
+
+        System.out.println("立即套用亮度設定: " + brightness + "% (透明度: " + opacity + ")");
+
+        // **立即套用到圖片檢視器**
+        if (imageViewer.getImageView() != null) {
+            imageViewer.getImageView().setOpacity(opacity);
+        }
+
+        // **如果在文字模式，立即套用到文字渲染器**
+        if (stateManager.isTextMode() && textRenderer.getMainContainer() != null) {
+            textRenderer.getMainContainer().setOpacity(opacity);
+        }
+
+        // **立即更新亮度覆蓋層**
+        updateBrightnessOverlayImmediate(brightness);
+    }
+
+    /**
+     * **新增：立即更新亮度覆蓋層**
+     */
+    private void updateBrightnessOverlayImmediate(int brightness) {
+        if (centerPane != null) {
+            javafx.scene.shape.Rectangle overlay = (javafx.scene.shape.Rectangle) centerPane.lookup("#brightnessOverlay");
+
+            if (overlay == null) {
+                // 立即創建新的覆蓋層
+                overlay = new javafx.scene.shape.Rectangle();
+                overlay.setId("brightnessOverlay");
+                overlay.setMouseTransparent(true);
+                overlay.widthProperty().bind(centerPane.widthProperty());
+                overlay.heightProperty().bind(centerPane.heightProperty());
+                centerPane.getChildren().add(overlay);
+            }
+
+            // 立即調整覆蓋層透明度
+            double overlayOpacity = Math.max(0, (100 - brightness) / 100.0 * 0.5);
+            overlay.setFill(javafx.scene.paint.Color.BLACK);
+            overlay.setOpacity(overlayOpacity);
+        }
+    }
+
+    private void updateUIImmediate() {
+        // **立即更新閱讀進度**
+        updateReadingProgress();
+
+        // **立即更新控制項目狀態**
+        updateControlsForMode();
+
+        // **立即更新按鈕狀態**
+        updateButtonStatesImmediate();
+    }
+
+    /**
+     * **新增：立即更新按鈕狀態**
+     */
+    private void updateButtonStatesImmediate() {
+        // **立即更新夜間模式按鈕狀態**
+        if (settingsManager.isNightMode()) {
+            if (!nightModeBtn.getStyle().contains("rgba(46,204,113,0.8)")) {
+                nightModeBtn.setStyle(nightModeBtn.getStyle() +
+                        "; -fx-background-color: linear-gradient(to bottom, rgba(46,204,113,0.8), rgba(39,174,96,0.8));");
+            }
+        } else {
+            nightModeBtn.setStyle(nightModeBtn.getStyle().replaceAll(
+                    "; -fx-background-color: linear-gradient\\(to bottom, rgba\\(46,204,113,0\\.8\\), rgba\\(39,174,96,0\\.8\\)\\)", ""));
+        }
+
+        // **立即更新護眼模式按鈕狀態**
+        if (settingsManager.isEyeCareMode()) {
+            if (!eyeCareBtn.getStyle().contains("rgba(46,204,113,0.8)")) {
+                eyeCareBtn.setStyle(eyeCareBtn.getStyle() +
+                        "; -fx-background-color: linear-gradient(to bottom, rgba(46,204,113,0.8), rgba(39,174,96,0.8));");
+            }
+        } else {
+            eyeCareBtn.setStyle(eyeCareBtn.getStyle().replaceAll(
+                    "; -fx-background-color: linear-gradient\\(to bottom, rgba\\(46,204,113,0\\.8\\), rgba\\(39,174,96,0\\.8\\)\\)", ""));
+        }
+    }
+
+    /**
+     * **新增：強制UI重新整理**
+     */
+    private void forceUIRefresh() {
+        Platform.runLater(() -> {
+            try {
+                // **方法1：強制重新計算樣式**
+                if (primaryStage.getScene() != null) {
+                    primaryStage.getScene().getRoot().applyCss();
+                    primaryStage.getScene().getRoot().autosize();
+                    primaryStage.getScene().getRoot().requestLayout();
+                }
+
+                // **方法2：強制中央面板重繪**
+                if (centerPane != null) {
+                    centerPane.applyCss();
+                    centerPane.autosize();
+                    centerPane.requestLayout();
+                }
+
+                // **方法3：如果有圖片，強制重新渲染當前頁面**
+                if (imageViewer.hasImages()) {
+                    int currentIndex = imageViewer.getCurrentIndex();
+                    // 觸發圖片重新渲染
+                    imageViewer.refreshCurrentImage();
+                }
+
+                // **方法4：如果在文字模式，強制重新渲染文字**
+                if (stateManager.isTextMode() && textRenderer.getMainContainer() != null) {
+                    textRenderer.getMainContainer().applyCss();
+                    textRenderer.getMainContainer().autosize();
+                    textRenderer.getMainContainer().requestLayout();
+                }
+
+                System.out.println("UI強制重新整理完成");
+
+            } catch (Exception e) {
+                System.err.println("UI重新整理時發生錯誤: " + e.getMessage());
+            }
+        });
+    }
+
+    private void simulatePageChange() {
+        try {
+            System.out.println("模擬頁面變化，強制觸發UI更新...");
+
+            // 方法1：如果有開啟的檔案，模擬微小的頁面移動
+            if (!stateManager.getCurrentFilePath().isEmpty()) {
+                Platform.runLater(() -> {
+                    if (stateManager.isTextMode()) {
+                        // 文字模式：重新渲染當前頁面
+                        int currentPage = textRenderer.getCurrentPageIndex();
+                        textRenderer.refreshCurrentPage(); // 需要在TextRenderer中實現
+                    } else {
+                        // 圖片模式：重新刷新當前圖片
+                        imageViewer.refreshCurrentImage(); // 需要在ImageViewer中實現
+                    }
+
+                    // 強制更新UI元素
+                    updateUI();
+
+                    System.out.println("頁面變化模擬完成");
+                });
+            }
+
+            // 方法2：強制重新計算頁碼顯示
+            Platform.runLater(() -> {
+                updatePageNumbersVisibilityImmediate();
+                applyBrightnessSettingsImmediate();
+            });
+
+        } catch (Exception e) {
+            System.err.println("模擬頁面變化時發生錯誤: " + e.getMessage());
+        }
+    }
 }
