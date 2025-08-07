@@ -10,9 +10,41 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.Node;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.paint.Color;
+import javafx.scene.control.Label;
+import javafx.scene.control.Tab;
+import javafx.scene.control.Button;
+import javafx.scene.control.TextField;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Slider;
+import javafx.scene.control.Separator;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.util.Duration;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.FadeTransition;
+import javafx.animation.ScaleTransition;
+import javafx.scene.input.MouseEvent;
 
 
 public class UIControlsFactory {
@@ -62,6 +94,7 @@ public class UIControlsFactory {
                     "-fx-font-weight: 600; " +
                     "-fx-padding: 6 12 6 12; " +
                     "-fx-cursor: hand; " +
+                    "-fx-mouse-transparent: false; " +
                     "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 4, 0, 0, 2);";
 
     // 重要按钮样式
@@ -157,7 +190,7 @@ public class UIControlsFactory {
         Button highlightBtn = createButton("🖍️ 重點", () -> showHighlightDialog(controller));
 
         // 专注模式按钮
-        focusModeBtn = createStyledButton("🎯 專注", () -> {
+        focusModeBtn = createStyledButton("🎯 專注模式", () -> {
             System.out.println("專注按鈕被點擊");
             controller.toggleFocusMode();
         }, FOCUS_BUTTON_STYLE);
@@ -233,11 +266,8 @@ public class UIControlsFactory {
         lineSpacingBtn = createButton("📏 行距", () -> showLineSpacingDialog(controller));
 
         // 阅读模式控制
-        Button focusModeBtn2 = createStyledButton("🎯 專注模式",
-                controller::toggleFocusMode, FOCUS_BUTTON_STYLE);
         Button speedReadBtn = createButton("⚡ 快速閱讀", () -> showSpeedReadingDialog(controller));
 
-        // 设置按钮 - 移至左下角
         Button settingsBtn = createStyledButton("⚙️ 設置",
                 () -> showEnhancedSettingsDialog(controller), ACCENT_BUTTON_STYLE);
 
@@ -275,7 +305,7 @@ public class UIControlsFactory {
         // 创建右侧控制区域
         HBox rightControls = new HBox(6);
         rightControls.setAlignment(Pos.CENTER_RIGHT);
-        rightControls.getChildren().addAll(focusModeBtn2, speedReadBtn);
+        rightControls.getChildren().addAll(speedReadBtn);
 
         // 使用BorderPane来排列左、中、右三个区域
         BorderPane bottomLayout = new BorderPane();
@@ -406,8 +436,14 @@ public class UIControlsFactory {
         });
 
         button.setOnAction(e -> {
-            System.out.println("按鈕被點擊 " + text);
-            action.run();
+            System.out.println("按鈕被點擊: " + text);
+            try {
+                action.run();
+                System.out.println("按鈕事件執行成功: " + text);
+            } catch (Exception ex) {
+                System.err.println("按鈕事件執行失敗: " + text + ", 錯誤: " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
 
         return button;
@@ -565,10 +601,30 @@ public class UIControlsFactory {
     private void showEnhancedSettingsDialog(MainController controller) {
         // 使用新的增強版設定對話框
         EnhancedSettingsDialog settingsDialog = new EnhancedSettingsDialog(controller.getSettingsManager(), controller.getPrimaryStage());
+        
+        // 設置UI更新回調，確保設定變更時能立即更新主界面
+        settingsDialog.setUIUpdateCallback(() -> {
+            // 使用完整的設定套用方法
+            controller.applyAllSettings();
+            
+            // 強制更新UI元件
+            Platform.runLater(() -> {
+                // 強制重新布局
+                if (controller.getPrimaryStage() != null && controller.getPrimaryStage().getScene() != null) {
+                    controller.getPrimaryStage().getScene().getRoot().requestLayout();
+                }
+                
+                // 強制更新控制列樣式
+                if (topControls != null) {
+                    topControls.setStyle(topControls.getStyle());
+                }
+                if (bottomControls != null) {
+                    bottomControls.setStyle(bottomControls.getStyle());
+                }
+            });
+        });
+        
         settingsDialog.show();
-
-        // 設定變更後重新套用設定
-        controller.applySettings();
     }
 
 
@@ -936,40 +992,37 @@ public class UIControlsFactory {
     private Tab createThemeTab(MainController controller) {
         Tab tab = new Tab();
 
-        VBox content = new VBox(20);
-        content.setPadding(new Insets(25));
-        content.setStyle("-fx-background-color: rgba(40,40,40,0.7);"); // 添加背景色增强可见性
+        VBox content = new VBox(25);
+        content.setPadding(new Insets(30));
+        content.setStyle("-fx-background-color: rgba(40,40,40,0.97);");
 
-        // 主题选择区块
-        VBox themeSection = createSettingsSection("🎨 外觀主題", "選擇你喜歡的風格");
+        // 標題
+        Label titleLabel = new Label("🎨 外觀主題 & 亮度預覽");
+        titleLabel.setStyle(
+                "-fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: 700; -fx-padding: 0 0 10 0;");
 
-        // 主题预览网格
-        VBox themePreviewContainer = new VBox(15);
+        // 主題預覽與亮度控制合併區塊
+        VBox previewAndBrightnessBox = new VBox(18);
+        previewAndBrightnessBox.setPadding(new Insets(24, 32, 24, 32));
+        previewAndBrightnessBox.setAlignment(Pos.CENTER);
+        previewAndBrightnessBox.setStyle(
+                "-fx-background-color: rgba(60,60,60,0.93); " +
+                "-fx-background-radius: 18; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 12, 0, 0, 2);");
 
-        // 当前主题显示 - 修复版本
+        // 當前主題顯示
         Label currentThemeLabel = new Label("當前主題: " + controller.getSettingsManager().getCurrentTheme().getDisplayName());
         currentThemeLabel.setStyle(
-                "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-font-size: 13px; " +
-                        "-fx-background-color: rgba(52,152,219,0.3); " +
-                        "-fx-padding: 10 15 10 15; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-border-color: rgba(52,152,219,0.5); " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 8;"
-        );
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; " +
+                "-fx-background-color: rgba(52,152,219,0.3); -fx-padding: 10 18 10 18; -fx-background-radius: 10;");
 
-        // 主题选项区域
+        // 主題選項
         VBox themeOptions = new VBox(12);
         ToggleGroup themeGroup = new ToggleGroup();
-
         for (E_Reader.settings.SettingsManager.ThemeMode theme : E_Reader.settings.SettingsManager.ThemeMode.values()) {
             HBox themeOption = createThemePreviewOption(theme, themeGroup, controller);
             themeOptions.getChildren().add(themeOption);
         }
-
-        // 设置当前选中的主题
         themeGroup.getToggles().forEach(toggle -> {
             RadioButton rb = (RadioButton) toggle;
             if (rb.getText().equals(controller.getSettingsManager().getCurrentTheme().getDisplayName())) {
@@ -977,111 +1030,87 @@ public class UIControlsFactory {
             }
         });
 
-        // 即时预览提示 - 修复版本
-        Label previewTip = new Label("💡 提示：選擇主題後會立即預覽效果");
-        previewTip.setStyle(
-                "-fx-text-fill: rgba(255,255,255,0.9); " +
-                        "-fx-font-size: 12px; " +
-                        "-fx-font-weight: 500; " +
-                        "-fx-background-color: rgba(255,255,255,0.08); " +
-                        "-fx-padding: 10 15 10 15; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-border-color: rgba(255,255,255,0.2); " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 8;"
-        );
-
-        themePreviewContainer.getChildren().addAll(currentThemeLabel, themeOptions, previewTip);
-        themeSection.getChildren().add(themePreviewContainer);
-
-        // 亮度控制区块 - 修复版本（使其真正可用）
-        VBox brightnessSection = createSettingsSection("🔆 顯示亮度", "調整閱讀舒適度");
-
+        // 亮度控制
+        HBox brightnessControl = new HBox(15);
+        brightnessControl.setAlignment(Pos.CENTER_LEFT);
         Slider brightnessSlider = new Slider(10, 100, currentBrightness);
         brightnessSlider.setShowTickLabels(true);
         brightnessSlider.setShowTickMarks(true);
         brightnessSlider.setMajorTickUnit(20);
         brightnessSlider.setMinorTickCount(1);
         brightnessSlider.setStyle(
-                "-fx-background-color: rgba(60,60,60,0.8); " +
-                        "-fx-border-radius: 8; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-border-color: rgba(255,255,255,0.2); " +
-                        "-fx-border-width: 1; " +
-                        "-fx-padding: 10;"
-        );
-
+                "-fx-background-color: rgba(60,60,60,0.8); -fx-border-radius: 8; -fx-background-radius: 8; -fx-border-color: rgba(255,255,255,0.2); -fx-border-width: 1; -fx-padding: 10;");
         Label brightnessLabel = new Label(String.format("%.0f%%", currentBrightness));
         brightnessLabel.setStyle(
-                "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-background-color: rgba(52,152,219,0.3); " +
-                        "-fx-padding: 5 10 5 10; " +
-                        "-fx-background-radius: 6;"
-        );
-
-        // 实现亮度预览功能（不立即应用）
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-color: rgba(52,152,219,0.3); -fx-padding: 5 10 5 10; -fx-background-radius: 6;");
         brightnessSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             double brightness = newVal.doubleValue();
             currentBrightness = brightness;
             brightnessLabel.setText(String.format("%.0f%%", brightness));
-
-            // 只预览亮度效果，不立即应用
             previewBrightness(controller, brightness);
+            updateAllThemePreviewsBrightness(controller);
         });
-
-        HBox brightnessControl = new HBox(15);
-        brightnessControl.setAlignment(Pos.CENTER_LEFT);
-        brightnessControl.getChildren().addAll(brightnessSlider, brightnessLabel);
         HBox.setHgrow(brightnessSlider, Priority.ALWAYS);
+        brightnessControl.getChildren().addAll(new Label("亮度："), brightnessSlider, brightnessLabel);
 
-        brightnessSection.getChildren().add(brightnessControl);
+        // 提示
+        Label previewTip = new Label("💡 選擇主題或調整亮度會即時預覽效果");
+        previewTip.setStyle(
+                "-fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: 500; -fx-background-color: rgba(255,193,7,0.13); -fx-padding: 10 18 10 18; -fx-background-radius: 10;");
 
-        // 添加应用按钮
+        previewAndBrightnessBox.getChildren().addAll(currentThemeLabel, themeOptions, brightnessControl, previewTip);
+
+        // 應用按鈕 - 強制更新版本
         Button applyButton = new Button("✅ 應用設定");
         applyButton.setStyle(
-            "-fx-background-color: linear-gradient(to bottom, " +
-                "rgba(46,204,113,0.9) 0%, " +
-                "rgba(39,174,96,0.9) 100%); " +
-                "-fx-border-color: rgba(46,204,113,0.8); " +
-                "-fx-border-width: 1; " +
-                "-fx-border-radius: 8; " +
-                "-fx-background-radius: 8; " +
-                "-fx-text-fill: white; " +
-                "-fx-font-size: 14px; " +
-                "-fx-font-weight: 700; " +
-                "-fx-padding: 10 20 10 20; " +
-                "-fx-cursor: hand; " +
-                "-fx-effect: dropshadow(gaussian, rgba(46,204,113,0.4), 6, 0, 0, 2);"
-        );
-        
+            "-fx-background-color: linear-gradient(to bottom, rgba(46,204,113,0.9) 0%, rgba(39,174,96,0.9) 100%); " +
+            "-fx-border-color: rgba(46,204,113,0.8); -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: 700; -fx-padding: 10 20 10 20; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(46,204,113,0.4), 6, 0, 0, 2);");
         applyButton.setOnAction(e -> {
-            // 应用所有设置
+            // 強制更新亮度設定
             applyBrightnessToApp(controller, currentBrightness);
+            
+            // 強制更新主題設定 - 確保當前選中的主題被正確應用
+            E_Reader.settings.SettingsManager.ThemeMode currentTheme = controller.getSettingsManager().getCurrentTheme();
+            controller.getSettingsManager().setThemeMode(currentTheme);
+            
+            // 強制保存所有設定
             controller.getSettingsManager().saveSettings();
-            controller.applySettings();
+            
+            // 使用完整的設定套用方法 - 強制更新所有UI元素
+            Platform.runLater(() -> {
+                // 強制重新套用所有設定到UI
+                controller.applyAllSettings();
+                
+                // 強制更新UI元件樣式
+                if (controller.getPrimaryStage() != null && controller.getPrimaryStage().getScene() != null) {
+                    controller.getPrimaryStage().getScene().getRoot().setStyle(controller.getPrimaryStage().getScene().getRoot().getStyle());
+                }
+                
+                // 強制更新控制列樣式
+                if (topControls != null) {
+                    topControls.setStyle(topControls.getStyle());
+                }
+                if (bottomControls != null) {
+                    bottomControls.setStyle(bottomControls.getStyle());
+                }
+                
+                // 強制重新布局
+                if (controller.getPrimaryStage() != null && controller.getPrimaryStage().getScene() != null) {
+                    controller.getPrimaryStage().getScene().getRoot().requestLayout();
+                }
+            });
+            
             controller.showNotification("設定已應用", "所有設定已成功應用並保存");
         });
-
         VBox applySection = new VBox(10);
         applySection.setAlignment(Pos.CENTER);
         applySection.getChildren().add(applyButton);
 
-        // 分隔线 - 修复版本
-        Separator separator = new Separator();
-        separator.setStyle("-fx-background-color: rgba(255,255,255,0.25); -fx-border-color: rgba(255,255,255,0.25);");
-
-        content.getChildren().addAll(themeSection, separator, brightnessSection, separator, applySection);
+        content.getChildren().addAll(titleLabel, previewAndBrightnessBox, applySection);
 
         ScrollPane scrollPane = new ScrollPane(content);
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle(
-                "-fx-background-color: transparent; " +
-                        "-fx-background: transparent; " +
-                        "-fx-border-color: transparent;"
-        );
-
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-border-color: transparent;");
         tab.setContent(scrollPane);
         return tab;
     }
@@ -1125,7 +1154,7 @@ public class UIControlsFactory {
     }
 
     /**
-     * 创建主题预览选项 - 修复版本
+     * 创建主题预览选项 - 修复版本（整合亮度预览）
      */
     private HBox createThemePreviewOption(E_Reader.settings.SettingsManager.ThemeMode theme,
                                           ToggleGroup group, MainController controller) {
@@ -1140,25 +1169,33 @@ public class UIControlsFactory {
                         "-fx-background-radius: 10;"
         );
 
-        // 主题预览色块 - 修复版本
+        // 主题预览色块 - 修复版本（整合亮度效果）
         VBox colorPreview = new VBox(0);
         colorPreview.setPrefSize(70, 45);
         colorPreview.setAlignment(Pos.CENTER);
+        colorPreview.setId("themePreview_" + theme.name()); // 設定ID以便更新亮度
+        
+        // 根據當前亮度調整顏色
+        int currentBrightness = controller.getSettingsManager().getEyeCareBrightness();
+        String adjustedBackground = adjustColorBrightness(theme.getBackgroundColor(), currentBrightness);
+        String adjustedText = adjustColorBrightness(theme.getTextColor(), currentBrightness);
+        
         colorPreview.setStyle(
-                "-fx-background-color: " + theme.getBackgroundColor() + "; " +
-                        "-fx-border-color: " + theme.getTextColor() + "; " +
+                "-fx-background-color: " + adjustedBackground + "; " +
+                        "-fx-border-color: " + adjustedText + "; " +
                         "-fx-border-width: 2; " +
                         "-fx-border-radius: 6; " +
                         "-fx-background-radius: 6;"
         );
 
-        // 示例文字 - 修复版本
+        // 示例文字 - 修复版本（整合亮度效果）
         Label sampleText = new Label("Aa 文字");
         sampleText.setStyle(
-                "-fx-text-fill: " + theme.getTextColor() + "; " +
+                "-fx-text-fill: " + adjustedText + "; " +
                         "-fx-font-size: 12px; " +
                         "-fx-font-weight: bold;"
         );
+        sampleText.setId("themeText_" + theme.name()); // 設定ID以便更新亮度
         colorPreview.getChildren().add(sampleText);
 
         // 主题选项 - 修复版本
@@ -1183,7 +1220,7 @@ public class UIControlsFactory {
         VBox textInfo = new VBox(5);
         textInfo.getChildren().addAll(themeRadio, descLabel);
 
-        // 即时预览功能
+        // 即时预览功能（整合亮度预览）
         themeRadio.setOnAction(e -> {
             if (themeRadio.isSelected()) {
                 // 临时预览主题效果
@@ -1888,5 +1925,99 @@ public class UIControlsFactory {
 
             controller.showNotification("快速閱讀", "自動翻頁已啟動，間隔 " + speed + " 秒");
         });
+    }
+
+    /**
+     * 調整顏色亮度的工具方法 - 從EnhancedSettingsDialog整合過來
+     */
+    private String adjustColorBrightness(String hexColor, int brightnessPct) {
+        try {
+            // 移除 # 符號
+            String cleanHex = hexColor.replace("#", "");
+
+            // 解析RGB值
+            int r = Integer.valueOf(cleanHex.substring(0, 2), 16);
+            int g = Integer.valueOf(cleanHex.substring(2, 4), 16);
+            int b = Integer.valueOf(cleanHex.substring(4, 6), 16);
+
+            // 根據亮度百分比調整 (50%為基準，100%為最亮，10%為最暗)
+            double factor = brightnessPct / 100.0;
+
+            // 對於暗色主題，提高亮度時讓顏色更亮
+            // 對於亮色主題，降低亮度時讓顏色更暗
+            if (isDarkColor(r, g, b)) {
+                // 暗色背景：亮度越高，顏色越亮
+                r = Math.min(255, (int) (r + (255 - r) * (factor - 0.5)));
+                g = Math.min(255, (int) (g + (255 - g) * (factor - 0.5)));
+                b = Math.min(255, (int) (b + (255 - b) * (factor - 0.5)));
+            } else {
+                // 亮色背景：亮度越低，顏色越暗
+                r = Math.max(0, (int) (r * factor));
+                g = Math.max(0, (int) (g * factor));
+                b = Math.max(0, (int) (b * factor));
+            }
+
+            return String.format("#%02x%02x%02x", r, g, b);
+        } catch (Exception e) {
+            return hexColor; // 如果轉換失敗，返回原色
+        }
+    }
+
+    /**
+     * 判斷是否為暗色
+     */
+    private boolean isDarkColor(int r, int g, int b) {
+        // 使用亮度公式計算
+        double brightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+        return brightness < 0.5;
+    }
+
+    /**
+     * 更新所有主題預覽的亮度效果
+     */
+    public void updateAllThemePreviewsBrightness(MainController controller) {
+        int currentBrightness = controller.getSettingsManager().getEyeCareBrightness();
+        
+        for (E_Reader.settings.SettingsManager.ThemeMode theme : E_Reader.settings.SettingsManager.ThemeMode.values()) {
+            updateThemePreviewBrightness(theme, currentBrightness, controller);
+        }
+    }
+
+    /**
+     * 更新特定主題預覽的亮度效果
+     */
+    private void updateThemePreviewBrightness(E_Reader.settings.SettingsManager.ThemeMode theme, 
+                                            int brightness, MainController controller) {
+        try {
+            // 查找主題預覽元素
+            javafx.scene.Node previewNode = controller.getPrimaryStage().getScene().lookup("#themePreview_" + theme.name());
+            javafx.scene.Node textNode = controller.getPrimaryStage().getScene().lookup("#themeText_" + theme.name());
+            
+            if (previewNode != null) {
+                // 根據亮度調整顏色
+                String adjustedBackground = adjustColorBrightness(theme.getBackgroundColor(), brightness);
+                String adjustedText = adjustColorBrightness(theme.getTextColor(), brightness);
+                
+                // 更新預覽背景
+                previewNode.setStyle(
+                    "-fx-background-color: " + adjustedBackground + "; " +
+                    "-fx-border-color: " + adjustedText + "; " +
+                    "-fx-border-width: 2; " +
+                    "-fx-border-radius: 6; " +
+                    "-fx-background-radius: 6;"
+                );
+                
+                // 更新文字顏色
+                if (textNode != null) {
+                    textNode.setStyle(
+                        "-fx-text-fill: " + adjustedText + "; " +
+                        "-fx-font-size: 12px; " +
+                        "-fx-font-weight: bold;"
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("更新主題預覽亮度失敗: " + e.getMessage());
+        }
     }
 }

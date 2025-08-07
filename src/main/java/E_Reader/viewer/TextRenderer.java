@@ -53,6 +53,7 @@ public class TextRenderer {
     private DeviceOrientation orientation = DeviceOrientation.PORTRAIT;
     private DeviceType deviceType = DeviceType.DESKTOP;
 
+
     public enum DisplayMode {
         PAGE_BY_PAGE,    // 一頁一頁顯示
         CONTINUOUS,      // 連續滾動
@@ -711,6 +712,13 @@ public class TextRenderer {
 
     public void setDisplayMode(DisplayMode displayMode) {
         this.displayMode = displayMode;
+        renderCurrentPage();
+    }
+
+    /**
+     * 重新整理當前頁面 - 修正方法名稱
+     */
+    public void refreshCurrentPage() {
         renderCurrentPage();
     }
 
