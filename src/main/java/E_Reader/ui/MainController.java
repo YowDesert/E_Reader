@@ -561,6 +561,9 @@ public class MainController {
             stateManager.setCurrentImagePageIndex(0);
         }
         updateUI();
+        Platform.runLater(() -> {
+            ensurePageNumbersVisibilityCorrect();
+        });
     }
 
     public void goToPreviousPage() {
@@ -575,7 +578,12 @@ public class MainController {
             imageViewer.prevPage();
             stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
         }
+        
+        // **修正：與 goToNextPage 相同的處理**
         updateUI();
+        Platform.runLater(() -> {
+            ensurePageNumbersVisibilityCorrect();
+        });
     }
 
     public void goToNextPage() {
@@ -590,12 +598,13 @@ public class MainController {
             imageViewer.nextPage();
             stateManager.setCurrentImagePageIndex(imageViewer.getCurrentIndex());
         }
+        
+        // **修正：確保UI更新後頁碼狀態正確**
         updateUI();
-
-        // **新增：確保頁碼等UI元素正確顯示**
+        
+        // **修正：確保頁碼顯示狀態不被意外改變**
         Platform.runLater(() -> {
-            updatePageNumbersVisibility();
-            applyBrightnessSettings();
+            ensurePageNumbersVisibilityCorrect();
         });
     }
 
@@ -609,6 +618,9 @@ public class MainController {
             stateManager.setCurrentImagePageIndex(imageViewer.getTotalPages() - 1);
         }
         updateUI();
+        Platform.runLater(() -> {
+            ensurePageNumbersVisibilityCorrect();
+        });
     }
 
     public void goToPage(int pageIndex) {
@@ -621,7 +633,12 @@ public class MainController {
             imageViewer.goToPage(pageIndex);
             stateManager.setCurrentImagePageIndex(pageIndex);
         }
+        
+        // **修正：與其他導航方法相同的處理**
         updateUI();
+        Platform.runLater(() -> {
+            ensurePageNumbersVisibilityCorrect();
+        });
     }
 
     // UI 控制面板創建
@@ -745,12 +762,37 @@ public class MainController {
     private void updateUI() {
         updateReadingProgress();
         updateControlsForMode();
-
-        // 確保頁碼顯示狀態正確
+        
+        // **修正：不在這裡調用頁碼顯示更新，避免狀態被意外改變**
+        // 只有在設定變更時才需要更新顯示狀態
+        
+        // 確保當前頁碼內容是最新的，但不改變顯示狀態
+        if (pageLabel != null && pageLabel.isVisible()) {
+            updatePageNumberContent();
+        }
+    }
+    
+    // **新增：確保頁碼顯示狀態正確的方法**
+    private void ensurePageNumbersVisibilityCorrect() {
         if (pageLabel != null) {
-            boolean shouldShowPageNumbers = settingsManager.isShowPageNumbers();
-            if (shouldShowPageNumbers != pageLabel.isVisible()) {
-                updatePageNumbersVisibility();
+            boolean shouldShow = settingsManager.isShowPageNumbers();
+            if (pageLabel.isVisible() != shouldShow) {
+                pageLabel.setVisible(shouldShow);
+                pageLabel.setManaged(shouldShow);
+                System.out.println("修正頁碼顯示狀態為: " + shouldShow);
+            }
+        }
+    }
+    
+    // **新增：只更新頁碼內容，不改變顯示狀態**
+    private void updatePageNumberContent() {
+        if (pageLabel != null) {
+            if (stateManager.isTextMode() && stateManager.getCurrentTextPages() != null) {
+                pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + stateManager.getCurrentTextPages().size());
+            } else if (!stateManager.isTextMode() && imageViewer.hasImages()) {
+                pageLabel.setText("頁面: " + (imageViewer.getCurrentIndex() + 1) + " / " + imageViewer.getTotalPages());
+            } else {
+                pageLabel.setText("頁面: 0 / 0");
             }
         }
     }
@@ -771,17 +813,9 @@ public class MainController {
 
     private void updateControlsForMode() {
         controlsFactory.updateControlsForMode(stateManager.isTextMode());
-
-        // 只有在設定啟用頁碼顯示時才更新內容，但不改變顯示狀態
-        if (pageLabel != null) {
-            if (stateManager.isTextMode() && stateManager.getCurrentTextPages() != null) {
-                pageLabel.setText("文字: " + (textRenderer.getCurrentPageIndex() + 1) + " / " + stateManager.getCurrentTextPages().size());
-            } else if (!stateManager.isTextMode() && imageViewer.hasImages()) {
-                pageLabel.setText("頁面: " + (imageViewer.getCurrentIndex() + 1) + " / " + imageViewer.getTotalPages());
-            } else {
-                pageLabel.setText("頁面: 0 / 0");
-            }
-        }
+        
+        // **修正：只更新頁碼內容，不改變顯示狀態**
+        updatePageNumberContent();
     }
 
     private void resetTextModeButton() {
