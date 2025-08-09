@@ -238,4 +238,11 @@ public class TextLoader {
         String colorHex = theme.getTextColor();
         return Color.web(colorHex);
     }
-} 
+    
+    /**
+     * 載入文字檔案 - 新增缺少的方法
+     */
+    public String loadTextFile(File file) throws IOException {
+        return readTextFile(file);
+    }
+}

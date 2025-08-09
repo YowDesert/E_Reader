@@ -610,6 +610,20 @@ public class EpubLoader {
     }
 
     /**
+     * 載入EPUB內容 - 新增缺少的方法
+     */
+    public String loadEpubContent(File epubFile) throws IOException {
+        List<TextExtractor.PageText> pages = extractTextFromEpub(epubFile);
+        
+        StringBuilder content = new StringBuilder();
+        for (TextExtractor.PageText page : pages) {
+            content.append(page.getOriginalText()).append("\n\n");
+        }
+        
+        return content.toString();
+    }
+
+    /**
      * 章節類
      */
     public static class Chapter {

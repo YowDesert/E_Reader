@@ -722,6 +722,26 @@ public class TextRenderer {
         renderCurrentPage();
     }
 
+    /**
+     * 設定內容 - 新增缺少的方法
+     */
+    public void setContent(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            showNoContentMessage();
+            return;
+        }
+        
+        // 將純文字內容轉換為PageText格式
+        List<TextExtractor.PageText> pages = new ArrayList<>();
+        TextExtractor.PageText page = new TextExtractor.PageText();
+        page.setPageNumber(0);
+        page.setOriginalText(content);
+        page.setTextSource(TextExtractor.TextSource.NATIVE);
+        pages.add(page);
+        
+        setPages(pages);
+    }
+    
     // 內部類別
     private static class TextPage {
         int pageNumber;

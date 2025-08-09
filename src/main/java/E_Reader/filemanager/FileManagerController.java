@@ -3,6 +3,9 @@ package E_Reader.filemanager;
 import E_Reader.ui.MainController;
 import E_Reader.settings.SettingsManager;
 import E_Reader.core.TextExtractor;
+import E_Reader.utils.AlertHelper;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -14,7 +17,10 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 import java.util.Optional;
 
 import java.io.File;
@@ -1890,8 +1896,95 @@ public class FileManagerController {
         String extension = file.getExtension().toLowerCase();
         return extension.equals("pdf") || 
                extension.equals("epub") || 
-               isImageExtension(extension);
+               isImageExtension(extension) ||
+                extension.equals("txt");
     }
+
+
+    /**
+     * 顯示PDF開啟警告對話框
+     */
+    private void showPdfOpeningWarning(FileItem fileItem, File physicalFile) {
+        Alert warningAlert = new Alert(Alert.AlertType.WARNING);
+        warningAlert.setTitle("PDF檔案開啟警告");
+        warningAlert.setHeaderText("即將開啟PDF檔案");
+
+        // 獲取檔案大小資訊
+        String fileSizeText = formatFileSize(fileItem.getSize());
+
+        StringBuilder content = new StringBuilder();
+        content.append("檔案: ").append(fileItem.getName()).append("\n");
+        content.append("大小: ").append(fileSizeText).append("\n\n");
+        content.append("⚠️ 重要提醒:\n");
+        content.append("• PDF檔案可能需要較長的載入時間\n");
+        content.append("• 大型PDF檔案會占用較多系統記憶體\n");
+        content.append("• 載入過程中請勿關閉程式\n");
+        content.append("• 建議確保有足夠的可用記憶體\n\n");
+
+        // 根據檔案大小給予不同建議
+        if (fileItem.getSize() > 50 * 1024 * 1024) { // 大於50MB
+            content.append("⚠️ 注意：此檔案較大，載入可能需要較長時間\n\n");
+        } else if (fileItem.getSize() > 10 * 1024 * 1024) { // 大於10MB
+            content.append("ℹ️ 提示：此檔案為中等大小，載入需要一些時間\n\n");
+        }
+
+        content.append("確定要開啟此PDF檔案嗎？");
+
+        warningAlert.setContentText(content.toString());
+
+        // 設定自定義按鈕
+        warningAlert.getButtonTypes().clear();
+
+        ButtonType confirmButton = new ButtonType("確定開啟", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        warningAlert.getButtonTypes().addAll(confirmButton, cancelButton);
+
+        // 設定對話框屬性
+        warningAlert.initOwner(primaryStage);
+        warningAlert.initModality(Modality.WINDOW_MODAL);
+        warningAlert.setResizable(true);
+
+        // 設定對話框樣式
+        warningAlert.getDialogPane().setStyle("-fx-font-family: 'Microsoft JhengHei';");
+
+        // 設定按鈕樣式
+        Button confirmBtn = (Button) warningAlert.getDialogPane().lookupButton(confirmButton);
+        Button cancelBtn = (Button) warningAlert.getDialogPane().lookupButton(cancelButton);
+
+        if (confirmBtn != null) {
+            confirmBtn.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold;");
+        }
+        if (cancelBtn != null) {
+            cancelBtn.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
+        }
+
+        // 顯示對話框並處理結果
+        Optional<ButtonType> result = warningAlert.showAndWait();
+        if (result.isPresent() && result.get() == confirmButton) {
+            // 用戶確認開啟，直接呼叫callback
+            openFileDirectly(physicalFile);
+        }
+        // 如果用戶取消，則不做任何動作
+    }
+
+    /**
+     * 直接開啟檔案（無警告）
+     */
+    private void openFileDirectly(File physicalFile) {
+        // 更新狀態標籤
+        statusLabel.setText("正在開啟檔案: " + physicalFile.getName());
+
+        // 呼叫原本的callback
+        fileOpenCallback.onFileOpen(physicalFile);
+
+        // 隱藏檔案管理器視窗
+        primaryStage.hide();
+    }
+
+
+
+
 
     /**
      * 檢查是否為圖片副檔名

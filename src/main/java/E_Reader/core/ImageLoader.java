@@ -110,4 +110,35 @@ public class ImageLoader {
         File[] files = folder.listFiles(this::isSupportedImageFile);
         return files != null ? files.length : 0;
     }
+
+    /**
+     * 載入單個圖片檔案
+     * 
+     * @param imageFile 圖片檔案
+     * @return 包含該圖片的圖片列表
+     */
+    public List<Image> loadImage(File imageFile) {
+        List<Image> images = new ArrayList<>();
+        
+        if (imageFile == null || !imageFile.exists() || !imageFile.isFile()) {
+            return images;
+        }
+        
+        if (!isSupportedImageFile(imageFile)) {
+            return images;
+        }
+        
+        try {
+            Image image = new Image(imageFile.toURI().toString());
+            if (!image.isError()) {
+                images.add(image);
+            } else {
+                System.err.println("無法載入圖片: " + imageFile.getName());
+            }
+        } catch (Exception e) {
+            System.err.println("載入圖片時發生錯誤: " + imageFile.getName() + " - " + e.getMessage());
+        }
+        
+        return images;
+    }
 }

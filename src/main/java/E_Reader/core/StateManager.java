@@ -224,4 +224,24 @@ public class StateManager {
     public boolean isFileLoaded() {
         return !currentFilePath.isEmpty() && hasLoadedContent();
     }
+    
+    // 新增缺少的方法
+    public void setCurrentFile(java.io.File file) {
+        if (file != null) {
+            this.currentFilePath = file.getAbsolutePath();
+        }
+    }
+    
+    public void setCurrentPage(int pageIndex) {
+        if (isTextMode) {
+            this.currentTextPageIndex = pageIndex;
+        } else {
+            this.currentImagePageIndex = pageIndex;
+        }
+    }
+    
+    public void setTotalPages(int totalPages) {
+        // 這個方法主要用於UI更新，實際的頁面數量由內容決定
+        // 可以用於驗證或記錄用途
+    }
 }

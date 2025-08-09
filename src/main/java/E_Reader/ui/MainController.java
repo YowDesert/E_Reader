@@ -1,6 +1,7 @@
 package E_Reader.ui;
 
 import E_Reader.core.*;
+import E_Reader.ui.components.LoadingProgressBar;
 import E_Reader.filemanager.FileManagerController;
 import E_Reader.settings.SettingsManager;
 import E_Reader.utils.AlertHelper;
@@ -25,10 +26,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 import javafx.geometry.Rectangle2D;
 import javafx.scene.shape.Rectangle;
@@ -76,6 +74,7 @@ public class MainController {
     private Button focusModeBtn;
     private ProgressBar readingProgressBar;
     private Label readingTimeLabel;
+    private LoadingProgressBar currentModernLoadingBar;
 
     // 專注模式狀態
     private boolean isFocusMode = false;
@@ -83,6 +82,53 @@ public class MainController {
     // 導覽列控制器
     private NavigationBarController navBarController;
 
+    private void showModernLoadingBar(LoadingProgressBar.LoadingType loadingType, String message) {
+        Platform.runLater(() -> {
+            // 如果已有載入條在顯示，先關閉它
+            if (currentModernLoadingBar != null && currentModernLoadingBar.isShowing()) {
+                currentModernLoadingBar.close();
+            }
+
+            currentModernLoadingBar = new LoadingProgressBar(loadingType);
+            currentModernLoadingBar.setOwner(primaryStage);
+            currentModernLoadingBar.updateMessage(message);
+            currentModernLoadingBar.show();
+        });
+    }
+
+    /**
+     * 隱藏現代化載入條
+     */
+    private void hideModernLoadingBar() {
+        Platform.runLater(() -> {
+            if (currentModernLoadingBar != null && currentModernLoadingBar.isShowing()) {
+                currentModernLoadingBar.hide();
+                currentModernLoadingBar = null;
+            }
+        });
+    }
+
+    /**
+     * 更新載入條進度
+     */
+    private void updateModernLoadingProgress(double progress) {
+        Platform.runLater(() -> {
+            if (currentModernLoadingBar != null && currentModernLoadingBar.isShowing()) {
+                currentModernLoadingBar.updateProgress(progress);
+            }
+        });
+    }
+
+    /**
+     * 更新載入條訊息
+     */
+    private void updateModernLoadingMessage(String message) {
+        Platform.runLater(() -> {
+            if (currentModernLoadingBar != null && currentModernLoadingBar.isShowing()) {
+                currentModernLoadingBar.updateMessage(message);
+            }
+        });
+    }
     public MainController(Stage primaryStage) {
         this.primaryStage = primaryStage;
 
@@ -321,50 +367,488 @@ public class MainController {
         }
     }
 
-    private boolean isImageFile(String fileName) {
-        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
-                fileName.endsWith(".png") || fileName.endsWith(".gif") ||
-                fileName.endsWith(".bmp");
-    }
+//    private boolean isImageFile(String fileName) {
+//        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+//                fileName.endsWith(".png") || fileName.endsWith(".gif") ||
+//                fileName.endsWith(".bmp");
+//    }
 
     private void openPdfFromFile(File file) {
-        try {
-            List<Image> images = pdfLoader.loadImagesFromPdf(file);
-            if (!images.isEmpty()) {
-                stateManager.setFileLoaded(file.getAbsolutePath(), true, false, images, null);
-                //測試亂打
-                switchToImageMode(0);
-                imageViewer.setImages(images);
-                stateManager.setCurrentImagePageIndex(0);
-                primaryStage.setTitle("E_Reader - " + file.getName());
-                updateUI();
-                resetTextModeButton();
+        // **改善：在檔案驗證階段就立即顯示載入畫面**
+        Platform.runLater(() -> {
+            showModernLoadingBar(LoadingProgressBar.LoadingType.PDF_PROCESSING, "準備開啟 PDF 檔案: " + file.getName());
+        });
+        
+        // 在新執行緒中處理 PDF
+        Thread pdfThread = new Thread(() -> {
+            try {
+                // **新增：檔案初步驗證階段**
+                Platform.runLater(() -> {
+                    updateModernLoadingMessage("正在驗證 PDF 檔案...");
+                    updateModernLoadingProgress(0.1);
+                });
+                
+                // 短暫延遲讓使用者看到載入畫面已出現
+                Thread.sleep(100);
+                
+                // 檢查檔案是否有效
+                if (!file.exists() || !file.canRead()) {
+                    Platform.runLater(() -> {
+                        hideModernLoadingBar();
+                        AlertHelper.showError("檔案錯誤", "無法讀取檔案: " + file.getName());
+                    });
+                    return;
+                }
+                
+                Platform.runLater(() -> {
+                    updateModernLoadingMessage("正在載入 PDF 內容...");
+                    updateModernLoadingProgress(0.3);
+                });
+                
+                // 載入PDF圖片
+                List<Image> images = pdfLoader.loadImagesFromPdf(file);
+                
+                Platform.runLater(() -> {
+                    updateModernLoadingMessage("正在處理圖片內容...");
+                    updateModernLoadingProgress(0.8);
+                });
+                
+                // 短暫延遲讓進度更明顯
+                Thread.sleep(200);
+                
+                Platform.runLater(() -> {
+                    updateModernLoadingProgress(1.0);
+                    updateModernLoadingMessage("載入完成！");
+                    
+                    // 再短暫延遲讓使用者看到完成狀態
+                    Timeline completeDelay = new Timeline(new KeyFrame(Duration.millis(300), e -> {
+                        hideModernLoadingBar();
+                        
+                        if (!images.isEmpty()) {
+                            stateManager.setFileLoaded(file.getAbsolutePath(), true, false, images, null);
+                            switchToImageMode(0);
+                            imageViewer.setImages(images);
+                            stateManager.setCurrentImagePageIndex(0);
+                            primaryStage.setTitle("E_Reader - " + file.getName());
+                            updateUI();
+                            resetTextModeButton();
 
-                showNotification("檔案開啟", "成功開啟 PDF檔案: " + file.getName());
+                            showNotification("檔案開啟", "成功開啟 PDF檔案: " + file.getName());
+                        } else {
+                            AlertHelper.showError("載入失敗", "PDF 檔案中沒有可讀取的內容");
+                        }
+                    }));
+                    completeDelay.play();
+                });
+                
+            } catch (Exception ex) {
+                Platform.runLater(() -> {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
+                });
             }
-        } catch (Exception ex) {
-            AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
-        }
+        });
+        
+        pdfThread.setDaemon(true);
+        pdfThread.start();
     }
 
     private void openEpubFromFile(File file) {
-        try {
-            List<Image> images = epubLoader.loadImagesFromEpub(file);
-            if (!images.isEmpty()) {
-                stateManager.setFileLoaded(file.getAbsolutePath(), false, true, images, null);
-                switchToImageMode(0);
-                imageViewer.setImages(images);
-                stateManager.setCurrentImagePageIndex(0);
-                primaryStage.setTitle("E_Reader - " + file.getName());
-                updateUI();
-                resetTextModeButton();
+        // **改善：在檔案驗證階段就立即顯示載入畫面**
+        Platform.runLater(() -> {
+            showModernLoadingBar(LoadingProgressBar.LoadingType.EPUB_PROCESSING, "準備開啟 EPUB 檔案: " + file.getName());
+        });
 
-                showNotification("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
-            } else {
-                AlertHelper.showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
+        Thread epubThread = new Thread(() -> {
+            try {
+                // **新增：檔案初步驗證階段**
+                Platform.runLater(() -> {
+                    updateModernLoadingMessage("正在驗證 EPUB 檔案...");
+                    updateModernLoadingProgress(0.1);
+                });
+                
+                // 短暫延遲讓使用者看到載入畫面已出現
+                Thread.sleep(100);
+                
+                // 檢查檔案是否有效
+                if (!file.exists() || !file.canRead()) {
+                    Platform.runLater(() -> {
+                        hideModernLoadingBar();
+                        AlertHelper.showError("檔案錯誤", "無法讀取檔案: " + file.getName());
+                    });
+                    return;
+                }
+                
+                Platform.runLater(() -> {
+                    updateModernLoadingMessage("正在載入 EPUB 內容...");
+                    updateModernLoadingProgress(0.3);
+                });
+                
+                // 載入EPUB圖片
+                List<Image> images = epubLoader.loadImagesFromEpub(file);
+                
+                Platform.runLater(() -> {
+                    updateModernLoadingMessage("正在處理內容結構...");
+                    updateModernLoadingProgress(0.8);
+                });
+                
+                // 短暫延遲讓進度更明顯
+                Thread.sleep(200);
+                
+                Platform.runLater(() -> {
+                    updateModernLoadingProgress(1.0);
+                    updateModernLoadingMessage("載入完成！");
+                    
+                    // 再短暫延遲讓使用者看到完成狀態
+                    Timeline completeDelay = new Timeline(new KeyFrame(Duration.millis(300), e -> {
+                        hideModernLoadingBar();
+                        
+                        if (!images.isEmpty()) {
+                            stateManager.setFileLoaded(file.getAbsolutePath(), false, true, images, null);
+                            switchToImageMode(0);
+                            imageViewer.setImages(images);
+                            stateManager.setCurrentImagePageIndex(0);
+                            primaryStage.setTitle("E_Reader - " + file.getName());
+                            updateUI();
+                            resetTextModeButton();
+
+                            showNotification("檔案開啟", "成功開啟 EPUB檔案: " + file.getName());
+                        } else {
+                            AlertHelper.showError("載入失敗", "EPUB檔案中沒有可讀取的內容");
+                        }
+                    }));
+                    completeDelay.play();
+                });
+                
+            } catch (Exception ex) {
+                Platform.runLater(() -> {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("無法載入 EPUB 檔案", ex.getMessage());
+                });
             }
-        } catch (Exception ex) {
-            AlertHelper.showError("無法載入 EPUB 檔案", ex.getMessage());
+        });
+
+        epubThread.setDaemon(true);
+        epubThread.start();
+    }
+
+    private void showPdfOpeningWarning(File file) {
+        Alert warningAlert = new Alert(Alert.AlertType.WARNING);
+        warningAlert.setTitle("檔案開啟警告");
+        warningAlert.setHeaderText("即將開啟檔案");
+        warningAlert.setContentText(
+                "檔案: " + file.getName() + "\n\n" +
+                        "⚠️ 注意事項:\n" +
+                        "• 檔案可能需要較長的載入時間\n" +
+                        "• 大型檔案會占用較多記憶體\n" +
+                        "• 建議確保有足夠的系統資源\n\n" +
+                        "是否確定要開啟此檔案？"
+        );
+
+        // 設定按鈕
+        warningAlert.getButtonTypes().clear();
+        warningAlert.getButtonTypes().addAll(
+                ButtonType.OK,
+                ButtonType.CANCEL
+        );
+
+        // 設定對話框樣式
+        warningAlert.initOwner(primaryStage);
+        warningAlert.initModality(Modality.WINDOW_MODAL);
+
+        // 顯示對話框並處理結果
+        Optional<ButtonType> result = warningAlert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            // 用戶確認開啟，立即開始載入流程
+            startFileLoading(file);
+        }
+        // 如果用戶取消，就什麼都不做
+    }
+    private void startFileLoading(File file) {
+        // 立即顯示進度條
+        LoadingProgressBar.LoadingType loadingType = determineLoadingType(file);
+        showModernLoadingBar(loadingType, "準備開啟檔案...");
+
+        // 在背景執行緒中載入檔案
+        Thread loadingThread = new Thread(() -> {
+            try {
+                // 更新進度條訊息
+                Platform.runLater(() -> updateModernLoadingMessage("正在分析檔案..."));
+                Thread.sleep(300); // 短暫延遲讓用戶看到進度條
+
+                // 更新進度到10%
+                Platform.runLater(() -> updateModernLoadingProgress(0.1));
+
+                // 根據檔案類型載入
+                String fileName = file.getName().toLowerCase();
+
+                if (fileName.endsWith(".pdf")) {
+                    loadPdfFile(file);
+                } else if (fileName.endsWith(".epub")) {
+                    loadEpubFile(file);
+                } else if (isImageFile(fileName)) {
+                    loadImageFile(file);
+                } else if (isTextFile(fileName)) {
+                    loadTextFile(file);
+                } else {
+                    throw new RuntimeException("不支援的檔案格式: " + fileName);
+                }
+
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("載入失敗", "無法開啟檔案: " + e.getMessage());
+                });
+            }
+        });
+
+        loadingThread.setDaemon(true);
+        loadingThread.start();
+    }
+
+    /**
+     * 決定載入類型
+     */
+    private LoadingProgressBar.LoadingType determineLoadingType(File file) {
+        String fileName = file.getName().toLowerCase();
+
+        if (fileName.endsWith(".pdf")) {
+            return LoadingProgressBar.LoadingType.PDF_PROCESSING;
+        } else if (fileName.endsWith(".epub")) {
+            return LoadingProgressBar.LoadingType.EPUB_PROCESSING;
+        } else if (isImageFile(fileName)) {
+            return LoadingProgressBar.LoadingType.IMAGE_LOADING;
+        } else {
+            return LoadingProgressBar.LoadingType.FILE_OPENING;
+        }
+    }
+
+    /**
+     * 載入PDF檔案（修改版本，包含進度更新）
+     */
+    private void loadPdfFile(File file) throws Exception {
+        Platform.runLater(() -> updateModernLoadingMessage("正在載入PDF檔案..."));
+        Platform.runLater(() -> updateModernLoadingProgress(0.2));
+
+        try {
+            // 先檢查PDF檔案是否有效
+            if (!pdfLoader.isPdfFile(file)) {
+                throw new RuntimeException("檔案不是有效的PDF格式");
+            }
+
+            Platform.runLater(() -> updateModernLoadingProgress(0.3));
+            Platform.runLater(() -> updateModernLoadingMessage("正在分析PDF頁面..."));
+
+            // 獲取頁面數量
+            int pageCount = pdfLoader.getPageCount(file);
+
+            Platform.runLater(() -> updateModernLoadingProgress(0.4));
+            Platform.runLater(() -> updateModernLoadingMessage("正在渲染PDF頁面 (1/" + pageCount + ")..."));
+
+            // 載入所有頁面
+            List<javafx.scene.image.Image> images = pdfLoader.loadImagesFromPdf(file);
+
+            Platform.runLater(() -> updateModernLoadingProgress(0.8));
+            Platform.runLater(() -> updateModernLoadingMessage("正在準備顯示..."));
+
+            // 在UI執行緒中設定圖片檢視器
+            Platform.runLater(() -> {
+                try {
+                    imageViewer.setImages(images);
+                    centerPane.getChildren().clear();
+                    centerPane.getChildren().add(imageViewer.getScrollPane());
+
+                    // 更新狀態
+                    stateManager.setCurrentFile(file);
+                    stateManager.setCurrentPage(0);
+                    stateManager.setTotalPages(images.size());
+
+                    // 更新UI控制項
+                    updatePageControls();
+
+                    // 更新進度到100%並隱藏進度條
+                    updateModernLoadingProgress(1.0);
+                    updateModernLoadingMessage("載入完成！");
+
+                    // 延遲隱藏進度條，讓用戶看到完成狀態
+                    Timeline delayHide = new Timeline(
+                            new KeyFrame(Duration.millis(500), e -> hideModernLoadingBar())
+                    );
+                    delayHide.play();
+
+                    // 顯示載入完成的通知
+                    showNotification("檔案載入成功", "PDF檔案已成功載入，共 " + images.size() + " 頁");
+
+                } catch (Exception e) {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("顯示失敗", "無法顯示PDF內容: " + e.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+            throw new RuntimeException("PDF載入失敗: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 載入EPUB檔案（也添加進度條支援）
+     */
+    private void loadEpubFile(File file) throws Exception {
+        Platform.runLater(() -> updateModernLoadingMessage("正在載入EPUB檔案..."));
+        Platform.runLater(() -> updateModernLoadingProgress(0.2));
+
+        try {
+            // 載入EPUB內容
+            String content = epubLoader.loadEpubContent(file);
+
+            Platform.runLater(() -> updateModernLoadingProgress(0.6));
+            Platform.runLater(() -> updateModernLoadingMessage("正在處理文字內容..."));
+
+            // 在UI執行緒中設定文字渲染器
+            Platform.runLater(() -> {
+                try {
+                    textRenderer.setContent(content);
+                    centerPane.getChildren().clear();
+                    centerPane.getChildren().add(textRenderer.getScrollPane());
+
+                    // 更新狀態
+                    stateManager.setCurrentFile(file);
+                    stateManager.setCurrentPage(0);
+                    stateManager.setTotalPages(1);
+
+                    // 更新UI控制項
+                    updatePageControls();
+
+                    // 完成載入
+                    updateModernLoadingProgress(1.0);
+                    updateModernLoadingMessage("載入完成！");
+
+                    Timeline delayHide = new Timeline(
+                            new KeyFrame(Duration.millis(500), e -> hideModernLoadingBar())
+                    );
+                    delayHide.play();
+
+                    showNotification("檔案載入成功", "EPUB檔案已成功載入");
+
+                } catch (Exception e) {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("顯示失敗", "無法顯示EPUB內容: " + e.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+            throw new RuntimeException("EPUB載入失敗: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 載入圖片檔案（添加進度條支援）
+     */
+    private void loadImageFile(File file) throws Exception {
+        Platform.runLater(() -> updateModernLoadingMessage("正在載入圖片..."));
+        Platform.runLater(() -> updateModernLoadingProgress(0.3));
+
+        try {
+            List<javafx.scene.image.Image> images = imageLoader.loadImage(file);
+
+            Platform.runLater(() -> updateModernLoadingProgress(0.8));
+            Platform.runLater(() -> updateModernLoadingMessage("正在準備顯示..."));
+
+            Platform.runLater(() -> {
+                try {
+                    imageViewer.setImages(images);
+                    centerPane.getChildren().clear();
+                    centerPane.getChildren().add(imageViewer.getScrollPane());
+
+                    // 更新狀態
+                    stateManager.setCurrentFile(file);
+                    stateManager.setCurrentPage(0);
+                    stateManager.setTotalPages(images.size());
+
+                    updatePageControls();
+
+                    updateModernLoadingProgress(1.0);
+                    updateModernLoadingMessage("載入完成！");
+
+                    Timeline delayHide = new Timeline(
+                            new KeyFrame(Duration.millis(300), e -> hideModernLoadingBar())
+                    );
+                    delayHide.play();
+
+                    showNotification("檔案載入成功", "圖片檔案已成功載入");
+
+                } catch (Exception e) {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("顯示失敗", "無法顯示圖片內容: " + e.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+            throw new RuntimeException("圖片載入失敗: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 檢查是否為圖片檔案
+     */
+    private boolean isImageFile(String fileName) {
+        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+                fileName.endsWith(".png") || fileName.endsWith(".gif") ||
+                fileName.endsWith(".bmp") || fileName.endsWith(".tiff") ||
+                fileName.endsWith(".webp");
+    }
+
+    /**
+     * 檢查是否為文字檔案
+     */
+    private boolean isTextFile(String fileName) {
+        return fileName.endsWith(".txt") || fileName.endsWith(".md") ||
+                fileName.endsWith(".doc") || fileName.endsWith(".docx");
+    }
+
+    /**
+     * 載入文字檔案
+     */
+    private void loadTextFile(File file) throws Exception {
+        Platform.runLater(() -> updateModernLoadingMessage("正在載入文字檔案..."));
+        Platform.runLater(() -> updateModernLoadingProgress(0.3));
+
+        try {
+            String content = textLoader.loadTextFile(file);
+
+            Platform.runLater(() -> updateModernLoadingProgress(0.8));
+            Platform.runLater(() -> updateModernLoadingMessage("正在準備顯示..."));
+
+            Platform.runLater(() -> {
+                try {
+                    textRenderer.setContent(content);
+                    centerPane.getChildren().clear();
+                    centerPane.getChildren().add(textRenderer.getScrollPane());
+
+                    stateManager.setCurrentFile(file);
+                    stateManager.setCurrentPage(0);
+                    stateManager.setTotalPages(1);
+
+                    updatePageControls();
+
+                    updateModernLoadingProgress(1.0);
+                    updateModernLoadingMessage("載入完成！");
+
+                    Timeline delayHide = new Timeline(
+                            new KeyFrame(Duration.millis(300), e -> hideModernLoadingBar())
+                    );
+                    delayHide.play();
+
+                    showNotification("檔案載入成功", "文字檔案已成功載入");
+
+                } catch (Exception e) {
+                    hideModernLoadingBar();
+                    AlertHelper.showError("顯示失敗", "無法顯示文字內容: " + e.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+            throw new RuntimeException("文字檔案載入失敗: " + e.getMessage(), e);
         }
     }
 
@@ -418,20 +902,8 @@ public class MainController {
         File pdfFile = fc.showOpenDialog(primaryStage);
 
         if (pdfFile != null) {
-            try {
-                List<Image> images = pdfLoader.loadImagesFromPdf(pdfFile);
-                if (!images.isEmpty()) {
-                    stateManager.setFileLoaded(pdfFile.getAbsolutePath(), true, false, images, null);
-                    switchToImageMode(0);
-                    imageViewer.setImages(images);
-                    stateManager.setCurrentImagePageIndex(0);
-                    primaryStage.setTitle("E_Reader - " + pdfFile.getName());
-                    updateUI();
-                    resetTextModeButton();
-                }
-            } catch (Exception ex) {
-                AlertHelper.showError("無法載入 PDF 檔案", ex.getMessage());
-            }
+            // **改善：使用新的載入機制**
+            openPdfFromFile(pdfFile);
         }
     }
 
@@ -469,7 +941,8 @@ public class MainController {
     }
 
     private void switchToTextMode(int targetPageIndex) {
-        showLoadingIndicator("正在提取文字內容...");
+        // 使用現代化載入條
+        showModernLoadingBar(LoadingProgressBar.LoadingType.TEXT_EXTRACTING, "正在提取文字內容，請稍候...");
 
         Thread extractThread = new Thread(() -> {
             try {
@@ -483,7 +956,7 @@ public class MainController {
                 }
 
                 Platform.runLater(() -> {
-                    hideLoadingIndicator();
+                    hideModernLoadingBar();
 
                     if (textPages != null && !textPages.isEmpty()) {
                         stateManager.setCurrentTextPages(textPages);
@@ -517,7 +990,7 @@ public class MainController {
 
             } catch (Exception e) {
                 Platform.runLater(() -> {
-                    hideLoadingIndicator();
+                    hideModernLoadingBar();
                     AlertHelper.showError("文字提取錯誤", e.getMessage());
                     stateManager.setTextMode(false);
                     resetTextModeButton();
@@ -823,7 +1296,10 @@ public class MainController {
         textModeBtn.setStyle(textModeBtn.getStyle().replace("; -fx-background-color: #28a745", ""));
     }
 
-    // 載入指示器
+    // 現代化載入條
+    private LoadingProgressBar currentLoadingBar;
+    
+    // 舊版載入指示器（保留以備兼容）
     private ProgressIndicator loadingIndicator;
     private Label loadingLabel;
     private VBox loadingBox;
@@ -1443,6 +1919,13 @@ public class MainController {
     }
 
     private Stage currentNotificationStage = null;
+
+    /**
+     * 更新頁面控制元件 - 新增缺少的方法
+     */
+    public void updatePageControls() {
+        updateUI();
+    }
 
 
 
