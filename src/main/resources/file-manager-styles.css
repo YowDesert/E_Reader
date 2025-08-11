@@ -1,73 +1,74 @@
-/* =========================== 檔案管理器專用iOS風格樣式 =========================== */
-/* 
-專門為JavaFX檔案管理器設計的現代化iOS風格樣式
-與主樣式表配合使用，提供最佳的檔案瀏覽體驗
-*/
+/* 檔案管理器專用樣式 - File Manager Styles */
 
-/* =========================== 檔案管理器主容器 =========================== */
-.file-manager-stage {
-    -fx-background-color: 
-        /* 主背景漸變 - 檔案管理器專用深色調 */
-        linear-gradient(135deg,
-            rgba(20, 20, 26, 0.98) 0%,
-            rgba(28, 28, 36, 0.96) 25%,
-            rgba(24, 24, 32, 0.98) 50%,
-            rgba(32, 32, 40, 0.96) 75%,
-            rgba(22, 22, 30, 0.99) 100%),
-        /* 檔案管理器光暈效果 */
-        radial-gradient(circle at 20% 30%,
-            rgba(10, 132, 255, 0.06) 0%,
-            rgba(52, 199, 89, 0.03) 40%,
-            transparent 70%),
-        radial-gradient(circle at 80% 70%,
-            rgba(255, 149, 0, 0.05) 0%,
-            rgba(255, 204, 0, 0.02) 40%,
-            transparent 70%);
+.file-manager-root {
+    -fx-background-color: linear-gradient(to bottom, rgba(18, 18, 18, 0.98) 0%, rgba(25, 25, 25, 0.95) 100%);
+    -fx-font-family: "Microsoft JhengHei UI", "SF Pro Display", "Segoe UI", sans-serif;
 }
 
-/* =========================== 工具列樣式 =========================== */
-.file-manager-toolbar {
-    -fx-background-color: 
-        linear-gradient(180deg,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.06) 50%,
-            rgba(255, 255, 255, 0.04) 100%);
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+.file-manager-header {
+    -fx-background-color: linear-gradient(to bottom, rgba(35, 35, 37, 0.95) 0%, rgba(28, 28, 30, 0.95) 100%);
+    -fx-border-color: rgba(255, 255, 255, 0.1);
     -fx-border-width: 0 0 0.5 0;
-    -fx-padding: 14 20 14 20;
-    -fx-spacing: 14;
-    -fx-effect: 
-        dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 4),
-        innershadow(gaussian, rgba(255,255,255,0.02), 2, 0, 0, 1);
-    -fx-background-radius: 0 0 18 18;
+    -fx-padding: 16px 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
 }
 
-/* 檔案卡片樣式 */
-.file-card-modern {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+.file-manager-title {
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+}
+
+.file-grid-cell {
+    -fx-background-color: rgba(44, 44, 46, 0.8);
+    -fx-border-color: rgba(255, 255, 255, 0.1);
     -fx-border-width: 0.5px;
-    -fx-background-radius: 14px;
-    -fx-border-radius: 14px;
-    -fx-padding: 16;
-    -fx-spacing: 10;
-    -fx-alignment: center;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 16px;
     -fx-cursor: hand;
-    -fx-pref-width: 150;
-    -fx-pref-height: 130;
-    -fx-effect: 
-        dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 4),
-        innershadow(gaussian, rgba(255,255,255,0.02), 2, 0, 0, 1);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0, 0, 2);
 }
 
-.file-card-modern:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.1);
+.file-grid-cell:hover {
+    -fx-background-color: rgba(54, 54, 56, 0.9);
     -fx-border-color: rgba(255, 255, 255, 0.2);
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
-    -fx-effect: 
-        dropshadow(gaussian, rgba(0,0,0,0.12), 12, 0, 0, 6),
-        innershadow(gaussian, rgba(255,255,255,0.04), 3, 0, 0, 1);
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
 }
 
-/* 其他檔案管理器樣式... */
+.file-icon {
+    -fx-font-size: 32px;
+    -fx-text-fill: rgba(255, 255, 255, 0.8);
+    -fx-alignment: center;
+    -fx-min-height: 48px;
+}
+
+.file-icon.pdf { -fx-text-fill: rgba(220, 53, 69, 0.9); }
+.file-icon.epub { -fx-text-fill: rgba(40, 167, 69, 0.9); }
+.file-icon.image { -fx-text-fill: rgba(255, 193, 7, 0.9); }
+.file-icon.folder { -fx-text-fill: rgba(52, 199, 89, 0.9); }
+
+.file-name {
+    -fx-text-fill: rgba(255, 255, 255, 0.95);
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+    -fx-padding: 8px 0 0 0;
+}
+
+.toolbar-button {
+    -fx-background-color: rgba(58, 58, 60, 0.7);
+    -fx-text-fill: rgba(255, 255, 255, 0.9);
+    -fx-font-size: 12px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+}
+
+.toolbar-button:hover {
+    -fx-background-color: rgba(68, 68, 70, 0.9);
+    -fx-text-fill: white;
+}
